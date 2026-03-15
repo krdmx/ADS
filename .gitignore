@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.history
+.next
+.pnpm-store
+.turbo
+coverage
+dist
+node_modules
+n8n_data
+*.tsbuildinfo
+*.log

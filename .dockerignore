@@ -1,0 +1,15 @@
+.env
+.git
+.history
+.next
+.turbo
+coverage
+dist
+node_modules
+n8n_data
+*.log
+**/.next
+**/.turbo
+**/coverage
+**/dist
+**/node_modules

@@ -1,0 +1,27 @@
+{
+  "name": "pep",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "postinstall": "pnpm --filter @repo/api prisma:generate",
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:infra:up": "docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d postgres n8n",
+    "dev:infra:down": "docker compose -f docker-compose.yaml -f docker-compose.dev.yaml stop postgres n8n",
+    "dev:infra:logs": "docker compose -f docker-compose.yaml -f docker-compose.dev.yaml logs -f postgres n8n",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down --remove-orphans"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@next/eslint-plugin-next": "^15.3.4",
+    "eslint": "^9.30.1",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1"
+  }
+}
