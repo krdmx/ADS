@@ -1,0 +1,23 @@
+{
+  "name": "@repo/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "lint": "eslint . --max-warnings=0",
+    "test": "echo 'No tests for @repo/web'"
+  },
+  "dependencies": {
+    "@repo/contracts": "workspace:*",
+    "next": "^15.3.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6"
+  }
+}
