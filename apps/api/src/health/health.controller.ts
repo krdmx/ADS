@@ -5,7 +5,7 @@ export class HealthController {
   @Get()
   getHealth() {
     return {
-      status: "ok"
+      status: "ok",
     };
   }
 }
