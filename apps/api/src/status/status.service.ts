@@ -2,7 +2,7 @@ import type { ApiStatusResponse, DatabaseStatus } from "@repo/contracts";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import { PrismaService } from "./prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class StatusService {
@@ -17,7 +17,7 @@ export class StatusService {
       database,
       status: database === "up" ? "ok" : "degraded",
       timestamp: new Date().toISOString(),
-      version: "0.1.0"
+      version: "0.1.0",
     };
   }
 
