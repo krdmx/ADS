@@ -1,0 +1,8 @@
+{
+  auto_https off
+  admin off
+}
+
+http://{$API_HOST} {
+  reverse_proxy host.docker.internal:3001
+}
