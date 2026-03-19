@@ -6,16 +6,18 @@ Monorepo for local and self-hosted development:
 - `apps/api` - NestJS API with Prisma
 - `postgres` - PostgreSQL in Docker
 - `n8n` - n8n in Docker
-- `infra/caddy` - reverse proxy for full Docker mode
+- `infra/caddy` - reverse proxy for Docker-routed modes
 
 ## Overview
 
-The project supports two main run modes:
+The project supports three explicit runtime modes:
 
-1. `Dev mode`
-   `web` and `api` run locally with hot reload, while `postgres` and `n8n` run in Docker.
-2. `Full Docker mode`
-   The whole stack runs through `docker compose`, including `web`, `api`, `postgres`, `n8n`, and `caddy`.
+1. `backend-devmode`
+   `web` and `api` run locally with hot reload, `postgres` and `caddy` run in Docker, and the frontend reaches the local API through `http://api.localhost`.
+2. `frontend-devmode`
+   `web` runs locally, while `api`, `postgres`, `n8n`, `gotenberg`, and `caddy` run in Docker. The web app talks to Docker through `http://api.localhost`.
+3. `production`
+   The full stack runs in Docker, including `web`, `api`, `postgres`, `n8n`, `gotenberg`, and `caddy`.
 
 ## Requirements
 
@@ -51,6 +53,12 @@ Templates:
 - [apps/api/.env.example](/mnt/c/Users/maxim/Documents/pep/apps/api/.env.example)
 - [apps/web/.env.local.example](/mnt/c/Users/maxim/Documents/pep/apps/web/.env.local.example)
 
+Mode-specific env knobs used by the runtime scripts:
+
+- `APP_MODE`: `backend-devmode`, `frontend-devmode`, `production`
+- `APPLICATION_PIPELINE_MODE`: `mock` or `live`
+- `NEXT_PUBLIC_API_URL`: the single API base URL used by the web app in both browser and SSR
+
 ## Initial Setup
 
 1. Install dependencies:
@@ -83,26 +91,11 @@ Important:
 
 - `pnpm install` automatically runs `prisma generate`
 - for local API development, `DATABASE_URL` should point to `localhost:5432`
-- for full Docker mode, `DATABASE_URL` in the root `.env` should point to `postgres:5432`
+- for Docker-based modes, `DATABASE_URL` in the root `.env` should point to `postgres:5432`
 
-## Dev Mode
+## Runtime Modes
 
-This is the recommended mode for day-to-day development.
-
-### 1. Start infrastructure only
-
-```bash
-pnpm dev:infra:up
-```
-
-This starts:
-
-- PostgreSQL on `localhost:5432`
-- n8n on `http://localhost:5678`
-
-### 2. Apply Prisma migrations
-
-If this is your first run or the database is empty:
+Before the first run of any mode, apply Prisma migrations if the database is empty:
 
 ```bash
 cd apps/api
@@ -110,64 +103,95 @@ pnpm prisma:migrate
 cd ../..
 ```
 
-### 3. Run web and api locally
+### 1. backend-devmode
+
+Recommended for day-to-day backend and UI work when the real pipeline is not needed.
 
 ```bash
-pnpm dev
+pnpm dev:backend
 ```
 
-After that:
+This mode starts Docker `postgres` and `caddy` first and then runs local `web` plus local `api` with:
+
+- `APP_MODE=backend-devmode`
+- `APPLICATION_PIPELINE_MODE=mock`
+- `NEXT_PUBLIC_API_URL=http://api.localhost`
+
+URLs:
 
 - web: `http://localhost:3000`
-- api: `http://localhost:3001`
-- n8n: `http://localhost:5678`
+- api through Caddy: `http://api.localhost`
 
-In dev mode, `n8n` editor links and webhook URLs are also generated against `http://localhost:5678`.
+Pipeline behavior:
 
-### 4. Stop infrastructure
+- `POST /api/v1/applications` still creates a `processing` ticket
+- the API auto-completes that ticket with synthetic markdown documents and a deterministic personal note
+- `n8n` is not required in this mode
 
-```bash
-pnpm dev:infra:down
-```
-
-### 5. View infra logs
+Infra helpers:
 
 ```bash
-pnpm dev:infra:logs
+pnpm dev:backend:infra:up
+pnpm dev:backend:infra:logs
+pnpm dev:backend:infra:down
 ```
 
-## Full Docker Mode
+### 2. frontend-devmode
 
-If you need a production-like run with the entire stack in containers:
+Use this mode when the frontend stays local, but the backend-side stack should run in Docker.
 
 ```bash
-docker compose up --build
+pnpm dev:frontend
 ```
 
-or:
+This mode starts Docker `api`, `postgres`, `n8n`, `gotenberg`, and `caddy`, then runs local `web` with:
+
+- `APP_MODE=frontend-devmode`
+- `NEXT_PUBLIC_API_URL=http://api.localhost`
+
+URLs:
+
+- web: `http://localhost:3000`
+- api through Caddy: `http://api.localhost`
+- n8n through Caddy: `http://n8n.localhost`
+
+Infra helpers:
+
+```bash
+pnpm dev:frontend:infra:up
+pnpm dev:frontend:infra:logs
+pnpm dev:frontend:infra:down
+```
+
+### 3. production
+
+Run the whole stack in Docker:
+
+```bash
+pnpm prod:up
+```
+
+Stop or inspect it with:
+
+```bash
+pnpm prod:logs
+pnpm prod:down
+```
+
+Backward-compatible aliases:
 
 ```bash
 pnpm docker:up
-```
-
-Stop it with:
-
-```bash
 pnpm docker:down
 ```
 
-Services started in this mode:
+URLs:
 
-- `web`
-- `api`
-- `postgres`
-- `n8n`
-- `caddy`
-- `gotenberg`
+- `http://app.localhost`
+- `http://api.localhost`
+- `http://n8n.localhost`
 
-By default, Caddy exposes the stack on `http://localhost`.
-
-## Local Hosts for Full Docker Mode
+## Local Hosts for frontend-devmode and production
 
 If your system does not resolve `*.localhost` automatically, add these entries to your hosts file:
 
@@ -177,12 +201,6 @@ If your system does not resolve `*.localhost` automatically, add these entries t
 127.0.0.1 n8n.localhost
 ```
 
-Typical URLs:
-
-- `http://app.localhost`
-- `http://api.localhost`
-- `http://n8n.localhost`
-
 ## Project Commands
 
 Root commands:
@@ -190,15 +208,29 @@ Root commands:
 ```bash
 pnpm install
 pnpm dev
+pnpm dev:backend
+pnpm dev:backend:infra:up
+pnpm dev:backend:infra:down
+pnpm dev:backend:infra:logs
+pnpm dev:frontend
+pnpm dev:frontend:infra:up
+pnpm dev:frontend:infra:down
+pnpm dev:frontend:infra:logs
+pnpm prod:up
+pnpm prod:logs
+pnpm prod:down
+pnpm docker:up
+pnpm docker:down
 pnpm build
 pnpm lint
 pnpm test
-pnpm dev:infra:up
-pnpm dev:infra:down
-pnpm dev:infra:logs
-pnpm docker:up
-pnpm docker:down
 ```
+
+Notes:
+
+- `pnpm dev` is the low-level raw `turbo run dev --parallel` helper
+- `backend-devmode` is the fastest mode when the real workflow does not matter
+- `frontend-devmode` is the closest local setup to the Docker backend routing used in production
 
 API commands:
 
@@ -336,9 +368,8 @@ pnpm install
 cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.local.example apps/web/.env.local
-pnpm dev:infra:up
 cd apps/api && pnpm prisma:migrate && cd ../..
-pnpm dev
+pnpm dev:backend
 ```
 
 ## Common Issues
@@ -374,7 +405,7 @@ Check `apps/api/.env`:
 DATABASE_URL=postgresql://pep:change-me-postgres@localhost:5432/pep?schema=public
 ```
 
-### Full Docker mode does not open on `app.localhost`
+### Docker-routed mode does not open on `*.localhost`
 
 Check:
 
@@ -384,8 +415,8 @@ Check:
 
 ## Notes
 
-- `dev` mode is best for daily development
-- `full Docker` mode is useful for integration checks
+- `backend-devmode` is best for daily development when you do not need `n8n`
+- `frontend-devmode` and `production` are useful for integration checks
 - `pnpm install` already includes Prisma Client generation through `postinstall`
 
 ---
@@ -398,16 +429,18 @@ Check:
 - `apps/api` - NestJS API с Prisma
 - `postgres` - PostgreSQL в Docker
 - `n8n` - n8n в Docker
-- `infra/caddy` - reverse proxy для full Docker режима
+- `infra/caddy` - reverse proxy для Docker-маршрутизации
 
 ## Что внутри
 
-Проект поддерживает два основных сценария запуска:
+Проект поддерживает три явных режима запуска:
 
-1. `Dev mode`
-   `web` и `api` работают локально с hot reload, а `postgres` и `n8n` поднимаются в Docker.
-2. `Full Docker mode`
-   весь стек запускается через `docker compose`, включая `web`, `api`, `postgres`, `n8n` и `caddy`.
+1. `backend-devmode`
+   `web` и `api` работают локально с hot reload, `postgres` и `caddy` поднимаются в Docker, а фронтенд ходит к локальному API через `http://api.localhost`.
+2. `frontend-devmode`
+   `web` работает локально, а `api`, `postgres`, `n8n`, `gotenberg` и `caddy` работают в Docker. Всё web-приложение ходит в Docker через `http://api.localhost`.
+3. `production`
+   весь стек запускается в Docker, включая `web`, `api`, `postgres`, `n8n`, `gotenberg` и `caddy`.
 
 ## Требования
 
@@ -443,6 +476,12 @@ docker compose version
 - [apps/api/.env.example](/mnt/c/Users/maxim/Documents/pep/apps/api/.env.example)
 - [apps/web/.env.local.example](/mnt/c/Users/maxim/Documents/pep/apps/web/.env.local.example)
 
+Mode-specific переменные, которые используют runtime-скрипты:
+
+- `APP_MODE`: `backend-devmode`, `frontend-devmode`, `production`
+- `APPLICATION_PIPELINE_MODE`: `mock` или `live`
+- `NEXT_PUBLIC_API_URL`: единый базовый URL API для web-приложения и в браузере, и в SSR
+
 ## Первая установка
 
 1. Установить зависимости:
@@ -475,26 +514,11 @@ cp apps/web/.env.local.example apps/web/.env.local
 
 - `pnpm install` автоматически запускает `prisma generate`
 - для локального API `DATABASE_URL` должен смотреть на `localhost:5432`
-- для full Docker режима `DATABASE_URL` в корневом `.env` должен смотреть на `postgres:5432`
+- для Docker-режимов `DATABASE_URL` в корневом `.env` должен смотреть на `postgres:5432`
 
-## Быстрый старт в Dev Mode
+## Режимы запуска
 
-Это основной режим для ежедневной разработки.
-
-### 1. Поднять только инфраструктуру
-
-```bash
-pnpm dev:infra:up
-```
-
-Эта команда поднимает:
-
-- PostgreSQL на `localhost:5432`
-- n8n на `http://localhost:5678`
-
-### 2. Применить Prisma миграции
-
-Если запускаешь проект впервые или база пустая:
+Перед первым запуском любого режима примени Prisma-миграции, если база пустая:
 
 ```bash
 cd apps/api
@@ -502,64 +526,95 @@ pnpm prisma:migrate
 cd ../..
 ```
 
-### 3. Запустить локально web и api
+### 1. backend-devmode
+
+Это основной режим для ежедневной разработки, когда реальный pipeline не нужен.
 
 ```bash
-pnpm dev
+pnpm dev:backend
 ```
 
-После этого:
+Команда сначала поднимает Docker `postgres` и `caddy`, а потом запускает локальные `web` и `api` с:
+
+- `APP_MODE=backend-devmode`
+- `APPLICATION_PIPELINE_MODE=mock`
+- `NEXT_PUBLIC_API_URL=http://api.localhost`
+
+Адреса:
 
 - web: `http://localhost:3000`
-- api: `http://localhost:3001`
-- n8n: `http://localhost:5678`
+- api через Caddy: `http://api.localhost`
 
-В dev-режиме `n8n` также генерирует editor links и webhook URL через `http://localhost:5678`.
+Поведение pipeline:
 
-### 4. Остановить инфраструктуру
+- `POST /api/v1/applications` всё так же создаёт `processing` ticket
+- API автоматически переводит ticket в `completed` и сохраняет синтетические markdown-документы и предсказуемый personal note
+- `n8n` в этом режиме не нужен
 
-```bash
-pnpm dev:infra:down
-```
-
-### 5. Посмотреть логи infra
+Команды для infra:
 
 ```bash
-pnpm dev:infra:logs
+pnpm dev:backend:infra:up
+pnpm dev:backend:infra:logs
+pnpm dev:backend:infra:down
 ```
 
-## Full Docker Mode
+### 2. frontend-devmode
+
+Используй этот режим, когда фронтенд нужен локально, а весь backend-side стек должен работать в Docker.
+
+```bash
+pnpm dev:frontend
+```
+
+Команда поднимает Docker `api`, `postgres`, `n8n`, `gotenberg` и `caddy`, а затем запускает локальный `web` с:
+
+- `APP_MODE=frontend-devmode`
+- `NEXT_PUBLIC_API_URL=http://api.localhost`
+
+Адреса:
+
+- web: `http://localhost:3000`
+- api через Caddy: `http://api.localhost`
+- n8n через Caddy: `http://n8n.localhost`
+
+Команды для infra:
+
+```bash
+pnpm dev:frontend:infra:up
+pnpm dev:frontend:infra:logs
+pnpm dev:frontend:infra:down
+```
+
+### 3. production
 
 Если нужен production-like сценарий со всем стеком в контейнерах:
 
 ```bash
-docker compose up --build
+pnpm prod:up
 ```
 
-или через script:
+Логи и остановка:
+
+```bash
+pnpm prod:logs
+pnpm prod:down
+```
+
+Старые алиасы сохранены:
 
 ```bash
 pnpm docker:up
-```
-
-Остановка:
-
-```bash
 pnpm docker:down
 ```
 
-В этом режиме поднимаются:
+Адреса:
 
-- `web`
-- `api`
-- `postgres`
-- `n8n`
-- `caddy`
-- `gotenberg`
+- `http://app.localhost`
+- `http://api.localhost`
+- `http://n8n.localhost`
 
-По умолчанию Caddy публикует стек на `http://localhost`.
-
-## Локальные хосты для full Docker режима
+## Локальные хосты для frontend-devmode и production
 
 Если твоя система не резолвит `*.localhost` автоматически, добавь в `hosts`:
 
@@ -569,12 +624,6 @@ pnpm docker:down
 127.0.0.1 n8n.localhost
 ```
 
-Обычно используются такие адреса:
-
-- `http://app.localhost`
-- `http://api.localhost`
-- `http://n8n.localhost`
-
 ## Команды проекта
 
 Корневые команды:
@@ -582,15 +631,29 @@ pnpm docker:down
 ```bash
 pnpm install
 pnpm dev
+pnpm dev:backend
+pnpm dev:backend:infra:up
+pnpm dev:backend:infra:down
+pnpm dev:backend:infra:logs
+pnpm dev:frontend
+pnpm dev:frontend:infra:up
+pnpm dev:frontend:infra:down
+pnpm dev:frontend:infra:logs
+pnpm prod:up
+pnpm prod:logs
+pnpm prod:down
+pnpm docker:up
+pnpm docker:down
 pnpm build
 pnpm lint
 pnpm test
-pnpm dev:infra:up
-pnpm dev:infra:down
-pnpm dev:infra:logs
-pnpm docker:up
-pnpm docker:down
 ```
+
+Примечания:
+
+- `pnpm dev` оставлен как низкоуровневый `turbo run dev --parallel`
+- `backend-devmode` самый быстрый режим, если реальный workflow сейчас не важен
+- `frontend-devmode` ближе всего к production-маршрутизации Docker backend-а
 
 Команды API:
 
@@ -698,9 +761,8 @@ pnpm install
 cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.local.example apps/web/.env.local
-pnpm dev:infra:up
 cd apps/api && pnpm prisma:migrate && cd ../..
-pnpm dev
+pnpm dev:backend
 ```
 
 ## Частые проблемы
@@ -736,7 +798,7 @@ pnpm prisma:generate
 DATABASE_URL=postgresql://pep:change-me-postgres@localhost:5432/pep?schema=public
 ```
 
-### Full Docker режим не открывается по `app.localhost`
+### Docker-маршрутизация не открывается по `*.localhost`
 
 Проверь:
 
@@ -746,6 +808,6 @@ DATABASE_URL=postgresql://pep:change-me-postgres@localhost:5432/pep?schema=publi
 
 ## Примечания
 
-- `dev` режим лучше всего подходит для ежедневной разработки
-- `full Docker` режим удобен для интеграционной проверки всего стека
+- `backend-devmode` лучше всего подходит для ежедневной разработки без `n8n`
+- `frontend-devmode` и `production` удобны для интеграционной проверки всего стека
 - `pnpm install` уже включает генерацию Prisma Client через `postinstall`

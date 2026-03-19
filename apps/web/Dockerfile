@@ -26,6 +26,7 @@ FROM deps AS build
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_OUTPUT_MODE=standalone
 
 COPY apps apps
 COPY packages packages

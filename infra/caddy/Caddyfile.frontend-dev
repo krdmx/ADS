@@ -3,10 +3,6 @@
   admin off
 }
 
-http://localhost, http://app.localhost, http://{$APP_HOST} {
-  reverse_proxy web:3000
-}
-
 http://{$API_HOST} {
   reverse_proxy api:3001
 }
