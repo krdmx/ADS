@@ -13,7 +13,7 @@
   overflow: hidden;
   margin-bottom: 1rem;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
@@ -27,7 +27,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -41,7 +41,7 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;

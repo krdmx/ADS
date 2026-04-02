@@ -9,6 +9,7 @@ type AlertPopupTone = "danger" | "default";
 
 export function AlertPopup({
   open,
+  eyebrow = "Confirm action",
   title,
   description,
   confirmLabel,
@@ -19,6 +20,7 @@ export function AlertPopup({
   onCancel,
 }: {
   open: boolean;
+  eyebrow?: string;
   title: string;
   description: string;
   confirmLabel: string;
@@ -116,7 +118,7 @@ export function AlertPopup({
         aria-describedby={descriptionId}
       >
         <div className={styles.content}>
-          <p className={styles.eyebrow}>Confirm action</p>
+          <p className={styles.eyebrow}>{eyebrow}</p>
           <h2 className={styles.title} id={titleId}>
             {title}
           </h2>
@@ -137,7 +139,9 @@ export function AlertPopup({
           </button>
           <button
             className={`${styles.confirmButton} ${
-              tone === "danger" ? styles.confirmButtonDanger : ""
+              tone === "danger"
+                ? styles.confirmButtonDanger
+                : styles.confirmButtonDefault
             }`}
             type="button"
             onClick={() => void onConfirm()}

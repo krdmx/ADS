@@ -1,4 +1,4 @@
-import { Fraunces, Manrope } from "next/font/google";
+import { Manrope, Raleway } from "next/font/google";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -9,14 +9,20 @@ const bodyFont = Manrope({
   variable: "--font-body",
 });
 
-const displayFont = Fraunces({
-  subsets: ["latin"],
+const displayFont = Raleway({
+  subsets: ["latin", "cyrillic"],
   variable: "--font-display",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "PEP Markdown Workspace",
-  description: "Create, review, edit, preview and export markdown ticket results.",
+  title: "Fitev Application Workspace",
+  description:
+    "Tailor resumes, track applications, and keep interview context in one workspace.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 interface RootLayoutProps {

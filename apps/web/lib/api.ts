@@ -8,5 +8,8 @@ export { apiUrl, getErrorMessage };
 
 export const api = createApiClient({
   adapter: "fetch",
+  baseURL: "",
+  fetchCredentials: "same-origin",
   noStoreGetRequests: false,
+  withCredentials: true,
 });

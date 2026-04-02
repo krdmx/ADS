@@ -168,12 +168,17 @@ export function buildLegacyResumeMarkdown(rawOutput: string, baseCv: string) {
 
 export function buildResumeMarkdownForPreview(rawOutput: string, baseCv: string) {
   const cleanedOutput = stripCodeFence(rawOutput);
+  const cleanedBaseCv = baseCv.trim();
 
   if (isLegacyFinalResumeMarkdown(cleanedOutput)) {
     return cleanedOutput;
   }
 
-  if (!baseCv.trim()) {
+  if (!cleanedBaseCv) {
+    return cleanedOutput;
+  }
+
+  if (cleanedOutput === cleanedBaseCv) {
     return cleanedOutput;
   }
 
