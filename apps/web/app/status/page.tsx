@@ -1,21 +1,30 @@
 import type { ApiStatusResponse } from "@repo/contracts";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { SiteHeader } from "@/components/site-header";
 import { StatusCard } from "@/components/status-card";
 import { buildApiUrl } from "@/lib/api-config";
 import { getErrorMessage } from "@/lib/api-response";
-import { serverApi } from "@/lib/server-api";
+import { getAuthenticatedServerApi } from "@/lib/server-api";
+import { getWebFeatures } from "@/lib/web-features";
 import styles from "./page.module.css";
 
 export default async function StatusPage() {
+  const { enableStatusPage, hideApiEndpoints } = getWebFeatures();
+
+  if (!enableStatusPage) {
+    notFound();
+  }
+
   await connection();
 
   let payload: ApiStatusResponse | null = null;
   let errorMessage: string | null = null;
 
   try {
-    const response = await serverApi.get<ApiStatusResponse>("/api/v1/status");
+    const api = await getAuthenticatedServerApi();
+    const response = await api.get<ApiStatusResponse>("/api/v1/status");
     payload = response.data;
   } catch (error) {
     errorMessage = getErrorMessage(error);
@@ -35,7 +44,11 @@ export default async function StatusPage() {
             This page mirrors the live status endpoint used by the app.
           </p>
         </div>
-        <code className={styles.endpoint}>{buildApiUrl("/api/v1/status")}</code>
+        {hideApiEndpoints ? null : (
+          <code className={styles.endpoint}>
+            {buildApiUrl("/api/v1/status")}
+          </code>
+        )}
       </section>
 
       <section className={styles.statusPanel}>

@@ -27,6 +27,7 @@ export function ProfileEditor({
   initialBaseCvErrorMessage,
   initialWorkTasks,
   initialWorkTasksErrorMessage,
+  isMockPipelineEnabled = false,
 }: {
   initialFullName?: string;
   initialFullNameErrorMessage?: string | null;
@@ -34,6 +35,7 @@ export function ProfileEditor({
   initialBaseCvErrorMessage?: string | null;
   initialWorkTasks?: string;
   initialWorkTasksErrorMessage?: string | null;
+  isMockPipelineEnabled?: boolean;
 }) {
   const hasInitialFullName =
     initialFullName !== undefined || initialFullNameErrorMessage !== undefined;
@@ -190,6 +192,14 @@ export function ProfileEditor({
   }
 
   async function saveBaseCv() {
+    if (isMockPipelineEnabled) {
+      setBaseCvState({
+        kind: "error",
+        message: "Base CV is locked while backend mock mode is enabled.",
+      });
+      return;
+    }
+
     setBaseCvState({ kind: "saving" });
 
     try {
@@ -224,12 +234,11 @@ export function ProfileEditor({
   }
 
   return (
-    <div className={styles.profileGrid}>
+    <div>
       <section className={styles.profilePanel}>
         <div className={styles.panelContent}>
           <div className={styles.panelHead}>
             <div>
-              <p className={styles.sectionLabel}>Profile field</p>
               <h2 className={styles.title}>Full Name</h2>
             </div>
             <button
@@ -248,7 +257,6 @@ export function ProfileEditor({
             className={styles.textInput}
             value={fullName}
             onChange={handleFullNameChange}
-            placeholder="Maxim Krendel"
             autoComplete="name"
             disabled={fullNameState.kind === "loading"}
           />
@@ -259,67 +267,84 @@ export function ProfileEditor({
         </div>
       </section>
 
-      <section className={styles.profilePanel}>
-        <div className={styles.panelContent}>
-          <div className={styles.panelHead}>
-            <div>
-              <p className={styles.sectionLabel}>Profile field</p>
-              <h2 className={styles.title}>Base CV</h2>
+      <div className={styles.profileGrid}>
+        <section className={styles.profilePanel}>
+          <div className={styles.panelContent}>
+            <div className={styles.panelHead}>
+              <div>
+                <h2 className={styles.title}>Base CV</h2>
+              </div>
+              <button
+                className={styles.primaryButton}
+                type="button"
+                onClick={() => void saveBaseCv()}
+                disabled={
+                  isMockPipelineEnabled ||
+                  baseCvState.kind === "loading" ||
+                  baseCvState.kind === "saving"
+                }
+              >
+                {isMockPipelineEnabled
+                  ? "Base CV Locked"
+                  : baseCvState.kind === "saving"
+                    ? "Saving..."
+                    : "Save Base CV"}
+              </button>
             </div>
-            <button
-              className={styles.primaryButton}
-              type="button"
-              onClick={() => void saveBaseCv()}
-              disabled={
-                baseCvState.kind === "loading" || baseCvState.kind === "saving"
-              }
-            >
-              {baseCvState.kind === "saving" ? "Saving..." : "Save Base CV"}
-            </button>
+            <textarea
+              className={styles.textArea}
+              value={baseCv}
+              onChange={handleBaseCvChange}
+              placeholder="Paste the base CV text here."
+              disabled={isMockPipelineEnabled || baseCvState.kind === "loading"}
+            />
+            {isMockPipelineEnabled ? (
+              <p className={styles.note}>
+                Base CV is locked while backend mock mode is enabled. Disable
+                mock mode to update it.
+              </p>
+            ) : null}
+            <FieldStatus
+              state={baseCvState}
+              loadingMessage="Loading base CV..."
+            />
           </div>
-          <textarea
-            className={styles.textArea}
-            value={baseCv}
-            onChange={handleBaseCvChange}
-            placeholder="Paste the base CV text here."
-            disabled={baseCvState.kind === "loading"}
-          />
-          <FieldStatus state={baseCvState} loadingMessage="Loading base CV..." />
-        </div>
-      </section>
+        </section>
 
-      <section className={styles.profilePanel}>
-        <div className={styles.panelContent}>
-          <div className={styles.panelHead}>
-            <div>
-              <p className={styles.sectionLabel}>Profile field</p>
-              <h2 className={styles.title}>Work Tasks</h2>
+        <section className={styles.profilePanel}>
+          <div className={styles.panelContent}>
+            <div className={styles.panelHead}>
+              <div>
+                <h2 className={styles.title}>Work Tasks</h2>
+              </div>
+              <button
+                className={styles.primaryButton}
+                type="button"
+                onClick={() => void saveWorkTasks()}
+                disabled={
+                  workTasksState.kind === "loading" ||
+                  workTasksState.kind === "saving"
+                }
+              >
+                {workTasksState.kind === "saving"
+                  ? "Saving..."
+                  : "Save Work Tasks"}
+              </button>
             </div>
-            <button
-              className={styles.primaryButton}
-              type="button"
-              onClick={() => void saveWorkTasks()}
-              disabled={
-                workTasksState.kind === "loading" ||
-                workTasksState.kind === "saving"
-              }
-            >
-              {workTasksState.kind === "saving" ? "Saving..." : "Save Work Tasks"}
-            </button>
+            <textarea
+              className={styles.textArea}
+              value={workTasks}
+              onChange={handleWorkTasksChange}
+              placeholder="Paste the work tasks context here."
+              disabled={workTasksState.kind === "loading"}
+            />
+            <FieldStatus
+              state={workTasksState}
+              loadingMessage="Loading work tasks..."
+            />
           </div>
-          <textarea
-            className={styles.textArea}
-            value={workTasks}
-            onChange={handleWorkTasksChange}
-            placeholder="Paste the work tasks context here."
-            disabled={workTasksState.kind === "loading"}
-          />
-          <FieldStatus
-            state={workTasksState}
-            loadingMessage="Loading work tasks..."
-          />
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
@@ -335,7 +360,9 @@ function FieldStatus({ state, loadingMessage }: FieldStatusProps) {
   }
 
   if (state.kind === "error") {
-    return <p className={`${styles.note} ${styles.noteError}`}>{state.message}</p>;
+    return (
+      <p className={`${styles.note} ${styles.noteError}`}>{state.message}</p>
+    );
   }
 
   if (state.kind === "success") {

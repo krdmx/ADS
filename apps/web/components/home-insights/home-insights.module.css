@@ -8,7 +8,7 @@
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
@@ -23,7 +23,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -44,7 +44,7 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -60,7 +60,7 @@
 }
 
 .sectionLink {
-  color: #22304f;
+  color: var(--ink);
   font-weight: 800;
   text-decoration: none;
   transition: transform 160ms ease;
@@ -104,9 +104,9 @@
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
-  border: 1px solid rgba(24, 32, 51, 0.08);
+  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--surface-base);
   text-decoration: none;
   transition:
     transform 160ms ease,
@@ -128,7 +128,7 @@
   height: 2rem;
   border-radius: 14px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-deep);
 }
 
 .recentTicketTitle {
@@ -155,22 +155,22 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #7a869f;
+  color: var(--muted);
   font-size: 0.86rem;
 }
 
 .metricGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
   margin: 1rem 0 0.75rem;
 }
 
 .metricCell {
   padding: 1rem;
-  border: 1px solid rgba(24, 32, 51, 0.06);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .metricLabel {

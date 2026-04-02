@@ -7,9 +7,8 @@ import { connection } from "next/server";
 
 import { TicketResultCard } from "@/components/ticket-result-card";
 import { SiteHeader } from "@/components/site-header";
-import { buildApiUrl } from "@/lib/api-config";
 import { getErrorMessage } from "@/lib/api-response";
-import { serverApi } from "@/lib/server-api";
+import { getAuthenticatedServerApi } from "@/lib/server-api";
 import styles from "./page.module.css";
 
 type ApplicationTicketPageProps = {
@@ -23,12 +22,15 @@ export default async function ApplicationTicketPage({
 }: ApplicationTicketPageProps) {
   const { ticketId } = await params;
   await connection();
+  const api = await getAuthenticatedServerApi();
 
-  const [ticketResult, baseCvResult, fullNameResult] = await Promise.allSettled([
-    serverApi.get<GetApplicationTicketResponse>(`/api/v1/applications/${ticketId}`),
-    serverApi.get<GetBaseCvResponse>("/api/v1/applications/baseCv"),
-    serverApi.get<GetFullNameResponse>("/api/v1/applications/fullName"),
-  ]);
+  const [ticketResult, baseCvResult, fullNameResult] = await Promise.allSettled(
+    [
+      api.get<GetApplicationTicketResponse>(`/api/v1/applications/${ticketId}`),
+      api.get<GetBaseCvResponse>("/api/v1/applications/baseCv"),
+      api.get<GetFullNameResponse>("/api/v1/applications/fullName"),
+    ]
+  );
   const payload =
     ticketResult.status === "fulfilled" ? ticketResult.value.data : null;
   const errorMessage =
@@ -59,13 +61,10 @@ export default async function ApplicationTicketPage({
             Edit markdown, review the preview, and export PDF.
           </h1>
           <p className={styles.lede}>
-            This workspace is driven by the backend ticket result for{" "}
+            This workspace is driven by the backend ticket result for:
             <code>{ticketId}</code>.
           </p>
         </div>
-        <code className={styles.endpoint}>
-          {buildApiUrl(`/api/v1/applications/${ticketId}`)}
-        </code>
       </section>
 
       <TicketResultCard

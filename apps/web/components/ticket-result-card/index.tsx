@@ -11,6 +11,7 @@ import type {
 } from "@repo/contracts";
 import { isAxiosError } from "axios";
 import { Download, Files, RefreshCcw, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   startTransition,
@@ -22,12 +23,14 @@ import {
 
 import { AlertPopup } from "@/components/alert-popup";
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
-import { buildMarkdownSheetExportHtml, MarkdownSheet } from "@/components/markdown-sheet";
+import {
+  buildMarkdownSheetExportHtml,
+  MarkdownSheet,
+} from "@/components/markdown-sheet";
 import { api, getErrorMessage } from "@/lib/api";
 import {
   formatArchiveFileName,
   formatPdfFileName,
-  formatTicketTitle,
 } from "@/lib/application-ticket";
 import {
   buildResumeMarkdownForPreview,
@@ -157,9 +160,9 @@ export function TicketResultCard({
   const [baseCvErrorMessage, setBaseCvErrorMessage] = useState<string | null>(
     initialBaseCvErrorMessage ?? null
   );
-  const [fullNameErrorMessage, setFullNameErrorMessage] = useState<string | null>(
-    initialFullNameErrorMessage ?? null
-  );
+  const [fullNameErrorMessage, setFullNameErrorMessage] = useState<
+    string | null
+  >(initialFullNameErrorMessage ?? null);
   const [drafts, setDrafts] = useState({
     cvMarkdown: initialPayload?.result?.cvMarkdown ?? "",
     coverLetterMarkdown: initialPayload?.result?.coverLetterMarkdown ?? "",
@@ -347,7 +350,9 @@ export function TicketResultCard({
   }
 
   function getExportRef(documentKey: DocumentKey) {
-    return documentKey === "cvMarkdown" ? cvExportRef.current : coverLetterExportRef.current;
+    return documentKey === "cvMarkdown"
+      ? cvExportRef.current
+      : coverLetterExportRef.current;
   }
 
   function getExportHtml(documentKey: DocumentKey) {
@@ -450,7 +455,9 @@ export function TicketResultCard({
       );
 
       triggerBlobDownload(
-        data instanceof Blob ? data : new Blob([data], { type: "application/zip" }),
+        data instanceof Blob
+          ? data
+          : new Blob([data], { type: "application/zip" }),
         archiveFileName
       );
 
@@ -512,9 +519,13 @@ export function TicketResultCard({
   const hasUnsavedChanges =
     payload?.result?.cvMarkdown !== drafts.cvMarkdown ||
     payload?.result?.coverLetterMarkdown !== drafts.coverLetterMarkdown;
-  const ticketTitle = payload
-    ? formatTicketTitle(payload.ticketId, payload.companyName)
-    : ticketId;
+  const ticketTitle = payload!.companyName;
+  const boardHref = {
+    pathname: "/applications/board",
+    query: {
+      ticketId,
+    },
+  };
   const missingFullNameMessage =
     fullNameErrorMessage ??
     "Profile full name is unavailable, so cover letter preview and export filenames use fallbacks until it can be loaded.";
@@ -601,12 +612,15 @@ export function TicketResultCard({
         </div>
       </section>
 
-      <div className={styles.sectionActions}>
+      <section className={styles.sectionActions}>
         <p className={styles.note}>
-          Refresh after the live workflow callback arrives, or keep editing the
-          current markdown result below.
+          Jump to the application board to open this ticket in its tracker side
+          panel, or refresh and remove the workspace from here.
         </p>
         <div className={styles.actionRow}>
+          <Link className={styles.secondaryButton} href={boardHref}>
+            <span>Open on Board</span>
+          </Link>
           <button
             className={styles.secondaryButton}
             type="button"
@@ -626,7 +640,7 @@ export function TicketResultCard({
             <span>{isDeleting ? "Deleting..." : "Delete Ticket"}</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {errorMessage ? (
         <p className={`${styles.note} ${styles.noteError}`} aria-live="polite">
@@ -679,7 +693,9 @@ export function TicketResultCard({
                   </div>
                   <span
                     className={`${styles.draftStateBadge} ${
-                      hasUnsavedChanges ? styles.draftPending : styles.draftSynced
+                      hasUnsavedChanges
+                        ? styles.draftPending
+                        : styles.draftSynced
                     }`}
                   >
                     {hasUnsavedChanges ? "unsaved" : "synced"}
@@ -754,7 +770,9 @@ export function TicketResultCard({
                   >
                     <Files size={16} />
                     <span>
-                      {isArchiveExporting ? "Bundling..." : "Download CV + Letter"}
+                      {isArchiveExporting
+                        ? "Bundling..."
+                        : "Download CV + Letter"}
                     </span>
                   </button>
                 </div>

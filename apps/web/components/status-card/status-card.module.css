@@ -2,7 +2,7 @@
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
@@ -16,7 +16,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -25,8 +25,8 @@
 .loadingState {
   background: linear-gradient(
       135deg,
-      rgba(239, 243, 255, 0.92),
-      rgba(255, 255, 255, 0.82)
+      rgba(255, 255, 255, 0.92),
+      rgba(236, 236, 228, 0.82)
     ),
     var(--panel);
 }
@@ -34,7 +34,7 @@
 .errorState {
   background: linear-gradient(
       135deg,
-      rgba(255, 238, 235, 0.95),
+      rgba(249, 238, 236, 0.95),
       rgba(255, 255, 255, 0.82)
     ),
     var(--panel);
@@ -47,7 +47,7 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -107,9 +107,9 @@
 .miniCard,
 .factsGrid div {
   padding: 1rem;
-  border: 1px solid rgba(24, 32, 51, 0.06);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .miniCard span,
@@ -129,7 +129,7 @@
 }
 
 .miniCard svg {
-  color: var(--accent);
+  color: var(--accent-deep);
 }
 
 .factsGrid {

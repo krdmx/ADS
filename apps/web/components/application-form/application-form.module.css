@@ -10,7 +10,7 @@
 .eyebrow,
 .statusLabel {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -37,6 +37,38 @@
   margin: 1rem 0 0;
 }
 
+.quotaPanel {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.35rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 1.2rem;
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.quotaLabel {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.quotaValue {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ink);
+  font-size: 1.15rem;
+}
+
+.quotaHint {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .composerForm {
   display: grid;
   gap: 1rem;
@@ -46,8 +78,8 @@
   border-radius: var(--radius-lg);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.94),
-    rgba(246, 248, 252, 0.78)
+    var(--surface-strong),
+    var(--surface-soft)
   );
 }
 
@@ -57,7 +89,7 @@
 }
 
 .fieldLabel {
-  color: #39445f;
+  color: var(--muted);
   font-size: 0.86rem;
   font-weight: 700;
 }
@@ -66,9 +98,9 @@
 .textArea {
   width: 100%;
   padding: 1rem 1.05rem;
-  border: 1px solid rgba(24, 32, 51, 0.1);
+  border: 1px solid var(--input-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--input-bg);
   color: var(--ink);
   transition:
     border-color 160ms ease,
@@ -79,8 +111,14 @@
 .textInput:focus,
 .textArea:focus {
   outline: none;
-  border-color: rgba(240, 103, 42, 0.4);
-  box-shadow: 0 0 0 4px rgba(240, 103, 42, 0.12);
+  border-color: var(--input-focus);
+  box-shadow: var(--focus-ring);
+}
+
+.textInput:disabled,
+.textArea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .textArea {
@@ -105,11 +143,11 @@
   border: 0;
   border-radius: 999px;
   padding: 0.88rem 1.28rem;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: #fff;
+  background: var(--accent);
+  color: var(--ink);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 18px 32px rgba(212, 79, 22, 0.28);
+  box-shadow: var(--accent-shadow);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -130,7 +168,7 @@
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
@@ -144,7 +182,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -154,8 +192,8 @@
   background:
     linear-gradient(
       135deg,
-      rgba(233, 247, 240, 0.95),
-      rgba(255, 255, 255, 0.8)
+      rgba(240, 245, 223, 0.95),
+      rgba(255, 255, 255, 0.82)
     ),
     var(--panel);
 }
@@ -164,7 +202,7 @@
   background:
     linear-gradient(
       135deg,
-      rgba(255, 238, 235, 0.95),
+      rgba(249, 238, 236, 0.95),
       rgba(255, 255, 255, 0.82)
     ),
     var(--panel);
@@ -201,7 +239,7 @@
 }
 
 .textLink {
-  color: #22304f;
+  color: var(--ink);
   font-weight: 800;
   text-decoration: none;
   transition: transform 160ms ease;

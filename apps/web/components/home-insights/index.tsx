@@ -3,7 +3,6 @@ import { Clock3, FilePenLine, FolderOpenDot } from "lucide-react";
 import Link from "next/link";
 
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
-import { formatTicketTitle } from "@/lib/application-ticket";
 import styles from "./home-insights.module.css";
 
 function truncateText(value: string, maxLength: number) {
@@ -111,11 +110,6 @@ export function HomeInsights({
               <strong className={styles.metricValue}>{stats.processing}</strong>
             </div>
           </div>
-
-          <p className={styles.note}>
-            Generated markdown stays editable in the ticket workspace, and the
-            PDF export is built directly from the current preview.
-          </p>
         </div>
       </section>
     </div>

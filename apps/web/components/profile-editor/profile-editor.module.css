@@ -1,5 +1,6 @@
 .profileGrid {
   display: grid;
+  height: 60vh;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
@@ -8,12 +9,13 @@
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
   box-shadow: var(--shadow);
   animation: riseIn var(--panel-enter-duration) ease both;
+  margin-bottom: 1rem;
 }
 
 .profilePanel::before {
@@ -22,7 +24,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -44,7 +46,7 @@
 
 .sectionLabel {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -66,11 +68,11 @@
   border: 0;
   border-radius: 999px;
   padding: 0.88rem 1.28rem;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: #fff;
+  background: var(--accent);
+  color: var(--ink);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 18px 32px rgba(212, 79, 22, 0.28);
+  box-shadow: var(--accent-shadow);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -90,9 +92,9 @@
 .textArea {
   width: 100%;
   padding: 1rem 1.05rem;
-  border: 1px solid rgba(24, 32, 51, 0.1);
+  border: 1px solid var(--input-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--input-bg);
   color: var(--ink);
   transition:
     border-color 160ms ease,
@@ -101,6 +103,7 @@
 }
 
 .textArea {
+  height: 40vh;
   min-height: 220px;
   resize: vertical;
 }
@@ -108,8 +111,14 @@
 .textInput:focus,
 .textArea:focus {
   outline: none;
-  border-color: rgba(240, 103, 42, 0.4);
-  box-shadow: 0 0 0 4px rgba(240, 103, 42, 0.12);
+  border-color: var(--input-focus);
+  box-shadow: var(--focus-ring);
+}
+
+.textInput:disabled,
+.textArea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .note {

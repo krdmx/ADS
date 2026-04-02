@@ -5,17 +5,20 @@ import { ApplicationsList } from "@/components/applications-list";
 import { SiteHeader } from "@/components/site-header";
 import { buildApiUrl } from "@/lib/api-config";
 import { getErrorMessage } from "@/lib/api-response";
-import { serverApi } from "@/lib/server-api";
+import { getAuthenticatedServerApi } from "@/lib/server-api";
+import { getWebFeatures } from "@/lib/web-features";
 import styles from "./page.module.css";
 
 export default async function ApplicationsPage() {
   await connection();
+  const { hideApiEndpoints } = getWebFeatures();
 
   let payload: GetApplicationsResponse | null = null;
   let errorMessage: string | null = null;
 
   try {
-    const response = await serverApi.get<GetApplicationsResponse>(
+    const api = await getAuthenticatedServerApi();
+    const response = await api.get<GetApplicationsResponse>(
       "/api/v1/applications"
     );
     payload = response.data;
@@ -31,16 +34,9 @@ export default async function ApplicationsPage() {
         <div className={styles.introCopy}>
           <p className={styles.eyebrow}>Ticket Index</p>
           <h1 className={styles.title}>
-            Review every application workspace from one place.
+            Review every workspace from one place.
           </h1>
-          <p className={styles.lede}>
-            Open any ticket to edit markdown, inspect the preview, export PDF,
-            or remove the ticket entirely.
-          </p>
         </div>
-        <code className={styles.endpoint}>
-          {buildApiUrl("/api/v1/applications")}
-        </code>
       </section>
 
       <section className={styles.listPanel}>

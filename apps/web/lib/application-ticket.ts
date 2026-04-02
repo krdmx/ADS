@@ -1,7 +1,4 @@
-export function formatTicketTitle(ticketId: string, companyName: string) {
-  const normalizedCompanyName = companyName.trim() || "Untitled Company";
-  return `${ticketId} · ${normalizedCompanyName}`;
-}
+
 
 export function formatPdfFileName(
   fullName: string,

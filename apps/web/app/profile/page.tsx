@@ -8,17 +8,21 @@ import { connection } from "next/server";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SiteHeader } from "@/components/site-header";
 import { getErrorMessage } from "@/lib/api-response";
-import { serverApi } from "@/lib/server-api";
+import { getAuthenticatedServerApi } from "@/lib/server-api";
+import { getWebFeatures } from "@/lib/web-features";
 import styles from "./page.module.css";
 
 export default async function ProfilePage() {
   await connection();
+  const { mockPipelineEnabled } = getWebFeatures();
+  const api = await getAuthenticatedServerApi();
 
-  const [fullNameResult, baseCvResult, workTasksResult] = await Promise.allSettled([
-    serverApi.get<GetFullNameResponse>("/api/v1/applications/fullName"),
-    serverApi.get<GetBaseCvResponse>("/api/v1/applications/baseCv"),
-    serverApi.get<GetWorkTasksResponse>("/api/v1/applications/workTasks"),
-  ]);
+  const [fullNameResult, baseCvResult, workTasksResult] =
+    await Promise.allSettled([
+      api.get<GetFullNameResponse>("/api/v1/applications/fullName"),
+      api.get<GetBaseCvResponse>("/api/v1/applications/baseCv"),
+      api.get<GetWorkTasksResponse>("/api/v1/applications/workTasks"),
+    ]);
   const fullNamePayload =
     fullNameResult.status === "fulfilled" ? fullNameResult.value.data : null;
   const fullNameErrorMessage =
@@ -48,12 +52,7 @@ export default async function ProfilePage() {
           <h1 className={styles.title}>
             Manage the source context used to generate each ticket.
           </h1>
-          <p className={styles.lede}>
-            Update the stored `fullName`, `baseCv`, and `workTasks` texts in
-            Postgres before launching a new ticket.
-          </p>
         </div>
-        <code className={styles.routeChip}>/profile</code>
       </section>
 
       <section className={styles.listPanel}>
@@ -64,6 +63,7 @@ export default async function ProfilePage() {
           initialBaseCvErrorMessage={baseCvErrorMessage}
           initialWorkTasks={workTasksPayload?.workTasks}
           initialWorkTasksErrorMessage={workTasksErrorMessage}
+          isMockPipelineEnabled={mockPipelineEnabled}
         />
       </section>
     </main>

@@ -11,7 +11,7 @@
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--panel);
   backdrop-filter: blur(var(--panel-blur));
@@ -29,7 +29,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -39,8 +39,8 @@
   background:
     linear-gradient(
       135deg,
-      rgba(239, 243, 255, 0.92),
-      rgba(255, 255, 255, 0.82)
+      rgba(255, 255, 255, 0.92),
+      rgba(236, 236, 228, 0.82)
     ),
     var(--panel);
 }
@@ -49,7 +49,7 @@
   background:
     linear-gradient(
       135deg,
-      rgba(255, 238, 235, 0.95),
+      rgba(249, 238, 236, 0.95),
       rgba(255, 255, 255, 0.82)
     ),
     var(--panel);
@@ -64,7 +64,7 @@
 .statusLabel,
 .factsGrid dt {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -118,10 +118,11 @@
 
 .factsGrid div,
 .ticketBlock {
+  margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid rgba(24, 32, 51, 0.06);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .factsGrid dd {
@@ -160,6 +161,7 @@
   border-radius: 999px;
   padding: 0.88rem 1.28rem;
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
   transition:
     transform 160ms ease,
@@ -169,20 +171,20 @@
 
 .primaryButton {
   border: 0;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: #fff;
-  box-shadow: 0 18px 32px rgba(212, 79, 22, 0.28);
+  background: var(--accent);
+  color: var(--ink);
+  box-shadow: var(--accent-shadow);
 }
 
 .secondaryButton {
-  border: 1px solid rgba(24, 32, 51, 0.1);
-  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
   color: var(--ink);
 }
 
 .dangerButton {
-  border: 1px solid rgba(24, 32, 51, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
   color: var(--danger);
 }
 
@@ -251,9 +253,9 @@
   gap: 0.45rem;
   width: 40%;
   padding: 0.7rem 0.95rem;
-  border: 1px solid rgba(24, 32, 51, 0.08);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--surface-base);
   color: var(--muted);
   cursor: pointer;
   transition:
@@ -264,10 +266,10 @@
 }
 
 .documentTabActive {
-  border-color: rgba(240, 103, 42, 0.2);
-  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: var(--surface-strong);
   color: var(--ink);
-  box-shadow: 0 10px 28px rgba(24, 32, 51, 0.08);
+  box-shadow: 0 10px 28px rgba(var(--ink-rgb), 0.08);
 }
 
 .editorMeta {
@@ -280,9 +282,9 @@
   min-height: 520px;
   resize: vertical;
   padding: 1rem 1.05rem;
-  border: 1px solid rgba(24, 32, 51, 0.1);
+  border: 1px solid var(--input-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--input-bg);
   color: var(--ink);
   line-height: 1.7;
   font-family:
@@ -295,8 +297,8 @@
 
 .markdownEditor:focus {
   outline: none;
-  border-color: rgba(240, 103, 42, 0.4);
-  box-shadow: 0 0 0 4px rgba(240, 103, 42, 0.12);
+  border-color: var(--input-focus);
+  box-shadow: var(--focus-ring);
 }
 
 .previewChip {
@@ -306,7 +308,7 @@
   padding: 0.7rem 0.95rem;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--surface-base);
   color: var(--muted);
   font-size: 0.82rem;
 }
@@ -315,7 +317,7 @@
   overflow: auto;
   padding: 1.1rem;
   border-radius: 24px;
-  background: linear-gradient(180deg, #edf1f8 0%, #dfe6f3 100%);
+  background: linear-gradient(180deg, #f4f4f4 0%, #ecece5 100%);
 }
 
 .previewSheetWrap {
@@ -324,7 +326,7 @@
 }
 
 .previewSheetFrame {
-  box-shadow: 0 24px 56px rgba(24, 32, 51, 0.12);
+  box-shadow: 0 24px 56px rgba(var(--ink-rgb), 0.12);
 }
 
 .exportCache {

@@ -10,8 +10,12 @@ import { resolveRequestUrl } from "@/lib/api-response";
 
 type CreateApiClientOptions = {
   adapter?: AxiosRequestConfig["adapter"];
+  baseURL?: string;
+  fetchCredentials?: RequestCredentials;
+  headers?: AxiosRequestConfig["headers"];
   lookup?: AxiosRequestConfig["lookup"];
   noStoreGetRequests?: boolean;
+  withCredentials?: boolean;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -51,6 +55,10 @@ function prepareFetchOptions(
     fetchOptions.cache ??= "no-store";
   }
 
+  if (options.fetchCredentials) {
+    fetchOptions.credentials ??= options.fetchCredentials;
+  }
+
   if (Object.keys(fetchOptions).length > 0) {
     config.fetchOptions = fetchOptions;
   }
@@ -69,11 +77,12 @@ export function createApiClient(
 ): AxiosInstance {
   const client = axios.create({
     adapter: options.adapter ?? "fetch",
-    baseURL: apiUrl,
+    baseURL: options.baseURL ?? apiUrl,
     timeout: 30_000,
-    withCredentials: false,
+    withCredentials: options.withCredentials ?? false,
     headers: {
       Accept: "application/json",
+      ...(options.headers ?? {}),
     },
     lookup: options.lookup,
   });

@@ -2,13 +2,11 @@
 
 import type { GetApplicationsResponse } from "@repo/contracts";
 import { RefreshCcw, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AlertPopup } from "@/components/alert-popup";
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
 import { api, getErrorMessage } from "@/lib/api";
-import { formatTicketTitle } from "@/lib/application-ticket";
 import styles from "./applications-list.module.css";
 import { useRouter } from "next/navigation";
 
@@ -301,15 +299,6 @@ export function ApplicationsList({
   return (
     <div className={styles.listStack}>
       <div className={styles.toolbar}>
-        <div className={styles.toolbarCopy}>
-          <p className={styles.note}>
-            Delete removes both the ticket and any stored markdown result.
-          </p>
-          <p className={styles.note}>
-            Select several rows to remove multiple tickets at once.
-          </p>
-        </div>
-
         <div className={styles.bulkActions}>
           <span className={styles.selectionCount} aria-live="polite">
             {selectedTicketIds.length === 0
@@ -415,7 +404,13 @@ export function ApplicationsList({
                           {ticket.companyName}
                         </strong>
                         <p className={styles.createdAt}>
-                          Created {new Date(ticket.createdAt).toLocaleString()}
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                          {" - "}
+                          {new Date(ticket.createdAt).getHours()}:
+                          {new Date(ticket.createdAt)
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0")}
                         </p>
                       </div>
                     </td>
@@ -423,7 +418,7 @@ export function ApplicationsList({
                       <ApplicationStatusBadge status={ticket.status} />
                     </td>
                     <td className={styles.copyCell}>
-                      {truncateText(ticket.vacancyDescription, 180)}
+                      {truncateText(ticket.vacancyDescription, 90)}
                     </td>
                     <td className={styles.dateCell}>
                       {new Date(ticket.updatedAt).toLocaleString()}

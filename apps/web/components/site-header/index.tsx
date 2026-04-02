@@ -1,73 +1,91 @@
-"use client";
-
-import { Activity, FolderKanban, House, UserRound } from "lucide-react";
+import type { GetAccountResponse } from "@repo/contracts";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+
+import { AppLogo } from "@/assets";
+import { getAuthenticatedServerApi } from "@/lib/server-api";
+import { SiteHeaderActions } from "./site-header-actions";
+import { SiteHeaderNav, type SiteNavigationItem } from "./site-header-nav";
 import styles from "./site-header.module.css";
 
-const navigationItems = [
+const navigationItems: SiteNavigationItem[] = [
   {
     href: "/",
     label: "Dashboard",
-    icon: House,
-    matches: (pathname: string) => pathname === "/",
+    icon: "dashboard",
   },
   {
     href: "/applications",
     label: "Tickets",
-    icon: FolderKanban,
-    matches: (pathname: string) => pathname.startsWith("/applications"),
+    icon: "tickets",
+  },
+  {
+    href: "/applications/board",
+    label: "Board",
+    icon: "board",
   },
   {
     href: "/profile",
     label: "Profile",
-    icon: UserRound,
-    matches: (pathname: string) => pathname.startsWith("/profile"),
+    icon: "profile",
   },
   {
     href: "/status",
     label: "Status",
-    icon: Activity,
-    matches: (pathname: string) => pathname.startsWith("/status"),
+    icon: "status",
   },
 ];
 
-export function SiteHeader() {
-  const pathname = usePathname();
+function formatUsageSummary(account: GetAccountResponse) {
+  if (account.plan === "exclusive") {
+    return "Unlimited access";
+  }
+
+  if (account.quotaBypassed) {
+    return "Unlimited locally";
+  }
+
+  return `${account.usedThisMonth}/${account.monthlyLimit} this month`;
+}
+
+function formatPlanLabel(account: GetAccountResponse) {
+  if (account.plan === "exclusive") {
+    return "Exclusive plan";
+  }
+
+  return account.plan === "paid" ? "Paid monthly" : "Free plan";
+}
+
+export async function SiteHeader() {
+  const api = await getAuthenticatedServerApi();
+  const response = await api.get<GetAccountResponse>("/api/v1/account");
+  const account = response.data;
+  const displayName =
+    account.user.name?.trim() || account.user.email || "Authenticated user";
 
   return (
     <header className={styles.headerShell}>
       <Link className={styles.brandMark} href="/">
-        <span className={styles.brandIcon}>P</span>
+        <span className={styles.brandIcon}>
+          <AppLogo className={styles.brandIconGraphic} height={30} width={30} />
+        </span>
         <span className={styles.brandCopy}>
-          <strong className={styles.brandTitle}>PEP</strong>
-          <small className={styles.brandSubtitle}>Markdown Ticket Workspace</small>
+          <strong className={styles.brandTitle}>Fitev</strong>
         </span>
       </Link>
 
-      <nav className={styles.siteNav} aria-label="Primary navigation">
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = item.matches(pathname);
-
-          return (
-            <Link
-              key={item.href}
-              className={`${styles.navLink} ${
-                isActive ? styles.navLinkActive : ""
-              }`}
-              href={item.href}
-            >
-              <Icon size={16} strokeWidth={2} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <SiteHeaderNav navigationItems={navigationItems} />
 
       <div className={styles.headerMeta}>
-        <span className={styles.metaChip}>Next.js + NestJS</span>
-        <span className={styles.metaChip}>Markdown -&gt; PDF</span>
+        <span
+          className={`${styles.metaChip} ${formatPlanLabel(account).includes("Exclusive") && styles.exclusive}`}
+        >
+          {formatPlanLabel(account)}
+        </span>
+        <span className={styles.metaChip}>{formatUsageSummary(account)}</span>
+        <SiteHeaderActions
+          plan={account.plan}
+          hasCustomerPortal={account.hasCustomerPortal}
+        />
       </div>
     </header>
   );

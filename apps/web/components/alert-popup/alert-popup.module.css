@@ -6,8 +6,8 @@
   place-items: center;
   padding: 1.5rem;
   background:
-    linear-gradient(180deg, rgba(24, 32, 51, 0.42), rgba(24, 32, 51, 0.58)),
-    rgba(24, 32, 51, 0.28);
+    linear-gradient(180deg, rgba(var(--ink-rgb), 0.42), rgba(var(--ink-rgb), 0.58)),
+    rgba(var(--ink-rgb), 0.28);
   backdrop-filter: blur(10px);
   animation: fadeIn 180ms ease both;
 }
@@ -17,16 +17,16 @@
   width: min(100%, 30rem);
   overflow: hidden;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background:
     linear-gradient(
       135deg,
-      rgba(255, 241, 238, 0.96),
+      rgba(249, 241, 240, 0.96),
       rgba(255, 255, 255, 0.92)
     ),
     var(--panel);
-  box-shadow: 0 28px 80px rgba(15, 21, 34, 0.28);
+  box-shadow: 0 28px 80px rgba(var(--ink-rgb), 0.28);
   animation: riseIn var(--panel-enter-duration) ease both;
 }
 
@@ -36,7 +36,7 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.38),
+    var(--panel-highlight),
     rgba(255, 255, 255, 0)
   );
   pointer-events: none;
@@ -102,19 +102,25 @@
 }
 
 .cancelButton {
-  border: 1px solid rgba(24, 32, 51, 0.1);
-  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
   color: var(--ink);
 }
 
 .confirmButton {
   border: 1px solid transparent;
-  color: #fff;
+  color: var(--ink);
+}
+
+.confirmButtonDefault {
+  background: var(--accent);
+  box-shadow: var(--accent-shadow);
 }
 
 .confirmButtonDanger {
   background: linear-gradient(135deg, var(--danger), #a93030);
-  box-shadow: 0 18px 32px rgba(200, 71, 71, 0.26);
+  box-shadow: 0 18px 32px rgba(200, 71, 71, 0.2);
+  color: #fff;
 }
 
 .cancelButton:hover:not(:disabled),
@@ -125,7 +131,7 @@
 .cancelButton:focus-visible,
 .confirmButton:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(240, 103, 42, 0.16);
+  box-shadow: var(--focus-ring);
 }
 
 .cancelButton:disabled,
