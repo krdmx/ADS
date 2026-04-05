@@ -13,8 +13,7 @@ export class StatusService {
 
     return {
       service: "fitev-api",
-      environment:
-        process.env.APP_MODE ?? process.env.NODE_ENV ?? "development",
+      environment: "local",
       database,
       status: database === "up" ? "ok" : "degraded",
       timestamp: new Date().toISOString(),

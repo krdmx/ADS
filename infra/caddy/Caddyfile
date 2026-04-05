@@ -3,14 +3,14 @@
   admin off
 }
 
-http://localhost, http://{$APP_HOST} {
+http://localhost, http://land.localhost {
   reverse_proxy web:3000
 }
 
-http://{$API_HOST} {
+http://api.localhost {
   reverse_proxy api:3001
 }
 
-http://{$N8N_HOST} {
+http://n8n.localhost {
   reverse_proxy n8n:5678
 }

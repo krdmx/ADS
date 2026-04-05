@@ -5,8 +5,6 @@ import {
   type AxiosResponse,
 } from "axios";
 
-import type { QuotaExceededErrorResponse } from "@repo/contracts";
-
 type ApiErrorPayload = {
   message?: string | string[];
   error?: string;
@@ -161,39 +159,4 @@ export function getResponseMessage(response: ApiResponseLike) {
 
 export function formatApiReachabilityError(url: string, error: unknown) {
   return `Backend is not reachable at ${url}. ${getFallbackErrorMessage(error)}`;
-}
-
-export function getQuotaExceededError(
-  error: unknown
-): QuotaExceededErrorResponse | null {
-  if (!isAxiosError(error)) {
-    return null;
-  }
-
-  const data = error.response?.data;
-
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return null;
-  }
-
-  const payload = data as Partial<QuotaExceededErrorResponse>;
-
-  if (payload.code !== "quota_exceeded") {
-    return null;
-  }
-
-  if (
-    typeof payload.message !== "string" ||
-    typeof payload.plan !== "string" ||
-    typeof payload.subscriptionStatus !== "string" ||
-    typeof payload.usedThisMonth !== "number" ||
-    typeof payload.monthlyLimit !== "number" ||
-    typeof payload.remainingThisMonth !== "number" ||
-    typeof payload.currentPeriodStart !== "string" ||
-    typeof payload.currentPeriodEnd !== "string"
-  ) {
-    return null;
-  }
-
-  return payload as QuotaExceededErrorResponse;
 }

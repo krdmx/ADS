@@ -4,6 +4,7 @@ import type {
   ApplicationTicketResultResponse,
   ExportApplicationArchiveRequest,
   ExportApplicationPdfRequest,
+  GetApplicationSummaryResponse,
   GetBaseCvResponse,
   GetApplicationTicketResponse,
   GetFullNameResponse,
@@ -23,6 +24,7 @@ import {
 
 import { AlertPopup } from "@/components/alert-popup";
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
+import { ApplicationSummaryCard } from "@/components/application-summary-card";
 import {
   buildMarkdownSheetExportHtml,
   MarkdownSheet,
@@ -39,6 +41,8 @@ import {
 import styles from "./ticket-result-card.module.css";
 
 type DocumentKey = "cvMarkdown" | "coverLetterMarkdown";
+
+const APPLICATION_GENERATION_POLL_INTERVAL_MS = 3_000;
 
 const documentMeta: Record<
   DocumentKey,
@@ -65,6 +69,12 @@ function countWords(value: string) {
   }
 
   return trimmed.split(/\s+/).length;
+}
+
+function shouldPollTicketResult(
+  ticket: GetApplicationTicketResponse | null | undefined
+) {
+  return Boolean(ticket && ticket.status === "processing" && !ticket.result);
 }
 
 function triggerBlobDownload(blob: Blob, fileName: string) {
@@ -160,6 +170,11 @@ export function TicketResultCard({
   const [baseCvErrorMessage, setBaseCvErrorMessage] = useState<string | null>(
     initialBaseCvErrorMessage ?? null
   );
+  const [summaryPayload, setSummaryPayload] =
+    useState<GetApplicationSummaryResponse | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isSummaryPolling, setIsSummaryPolling] = useState(false);
   const [fullNameErrorMessage, setFullNameErrorMessage] = useState<
     string | null
   >(initialFullNameErrorMessage ?? null);
@@ -170,16 +185,17 @@ export function TicketResultCard({
 
   useEffect(() => {
     let active = true;
+    let timeoutId: number | undefined;
+    const shouldSkipInitialTicketRequest =
+      refreshKey === 0 &&
+      initialPayload !== undefined &&
+      !shouldPollTicketResult(initialPayload);
 
-    if (refreshKey === 0 && hasServerSeed) {
-      return () => {
-        active = false;
-      };
-    }
-
-    async function loadTicket() {
-      setIsLoading(true);
-      setErrorMessage(null);
+    async function loadTicket(background = false) {
+      if (!background) {
+        setIsLoading(true);
+        setErrorMessage(null);
+      }
 
       try {
         const { data: nextPayload } =
@@ -202,24 +218,41 @@ export function TicketResultCard({
               coverLetterMarkdown: nextPayload.result.coverLetterMarkdown,
             });
           }
+
+          if (shouldPollTicketResult(nextPayload)) {
+            timeoutId = window.setTimeout(() => {
+              void loadTicket(true);
+            }, APPLICATION_GENERATION_POLL_INTERVAL_MS);
+          }
         }
       } catch (error) {
         if (active) {
           setErrorMessage(getErrorMessage(error));
         }
       } finally {
-        if (active) {
+        if (active && !background) {
           setIsLoading(false);
         }
       }
     }
 
-    void loadTicket();
+    if (shouldSkipInitialTicketRequest) {
+      setIsLoading(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    void loadTicket(refreshKey === 0 && Boolean(initialPayload));
 
     return () => {
       active = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [hasServerSeed, refreshKey, ticketId]);
+  }, [initialPayload, refreshKey, ticketId]);
 
   useEffect(() => {
     let active = true;
@@ -300,6 +333,65 @@ export function TicketResultCard({
   function handleRefresh() {
     setRefreshKey((current) => current + 1);
   }
+
+  useEffect(() => {
+    let active = true;
+    let timeoutId: number | undefined;
+
+    async function loadSummary(background = false) {
+      if (!background) {
+        setIsSummaryLoading(true);
+      }
+
+      setSummaryError(null);
+
+      try {
+        const { data } = await api.get<GetApplicationSummaryResponse>(
+          `/api/v1/applications/${ticketId}/summary`,
+          {
+            fetchOptions: {
+              cache: "no-store",
+            },
+          }
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setSummaryPayload(data);
+
+        if (data.status === "available") {
+          setIsSummaryPolling(false);
+          return;
+        }
+
+        setIsSummaryPolling(true);
+        timeoutId = window.setTimeout(() => {
+          void loadSummary(true);
+        }, APPLICATION_GENERATION_POLL_INTERVAL_MS);
+      } catch (error) {
+        if (active) {
+          setSummaryPayload(null);
+          setSummaryError(getErrorMessage(error));
+          setIsSummaryPolling(false);
+        }
+      } finally {
+        if (active && !background) {
+          setIsSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      active = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [refreshKey, ticketId]);
 
   function updateDraft(nextValue: string) {
     setSaveMessage(null);
@@ -529,6 +621,13 @@ export function TicketResultCard({
   const missingFullNameMessage =
     fullNameErrorMessage ??
     "Profile full name is unavailable, so cover letter preview and export filenames use fallbacks until it can be loaded.";
+  const summaryStatusLabel =
+    summaryPayload?.status === "available"
+      ? "Ready"
+      : isSummaryPolling || isSummaryLoading
+        ? "Auto-check every 3s"
+        : "Waiting";
+  const isResultPending = payload?.status === "processing" && !payload?.result;
 
   if (!payload && isLoading) {
     return (
@@ -612,10 +711,35 @@ export function TicketResultCard({
         </div>
       </section>
 
+      <section className={styles.summaryPanel}>
+        <div className={styles.panelContent}>
+          <div className={styles.cardHeadingRow}>
+            <div>
+              <p className={styles.eyebrow}>Summary</p>
+              <h2 className={styles.summaryTitle}>Company and vacancy summary</h2>
+            </div>
+            <p className={styles.statusLabel}>{summaryStatusLabel}</p>
+          </div>
+
+          <p className={styles.bodyText}>
+            Summary status is checked automatically every 3 seconds until the
+            backend callback saves it.
+          </p>
+
+          <SummaryPreview
+            errorMessage={summaryError}
+            isLoading={isSummaryLoading}
+            isPolling={isSummaryPolling}
+            payload={summaryPayload}
+          />
+        </div>
+      </section>
+
       <section className={styles.sectionActions}>
         <p className={styles.note}>
-          Jump to the application board to open this ticket in its tracker side
-          panel, or refresh and remove the workspace from here.
+          This workspace auto-checks resume and summary generation every 3
+          seconds while processing is still running. You can still jump to the
+          board, refresh manually, or remove the ticket from here.
         </p>
         <div className={styles.actionRow}>
           <Link className={styles.secondaryButton} href={boardHref}>
@@ -674,11 +798,14 @@ export function TicketResultCard({
         <section className={styles.emptyPanel}>
           <p className={styles.eyebrow}>Result Pending</p>
           <h2 className={styles.emptyTitle}>
-            No markdown result has been saved for this ticket yet.
+            {isResultPending
+              ? "Resume generation is still running."
+              : "No markdown result has been saved for this ticket yet."}
           </h2>
           <p className={styles.emptyText}>
-            Once the workflow posts back, this page will unlock the editor and
-            PDF preview workspace.
+            {isResultPending
+              ? "We check the backend every 3 seconds and unlock the editor as soon as the CV and cover letter are saved."
+              : "Once the workflow posts back, this page will unlock the editor and PDF preview workspace."}
           </p>
         </section>
       ) : (
@@ -842,4 +969,46 @@ export function TicketResultCard({
       />
     </div>
   );
+}
+
+function SummaryPreview({
+  errorMessage,
+  isLoading,
+  isPolling,
+  payload,
+}: {
+  errorMessage: string | null;
+  isLoading: boolean;
+  isPolling: boolean;
+  payload: GetApplicationSummaryResponse | null;
+}) {
+  if (isLoading) {
+    return <p className={styles.inlineStatus}>Checking summary status...</p>;
+  }
+
+  if (errorMessage) {
+    return <p className={styles.inlineError}>{errorMessage}</p>;
+  }
+
+  if (!payload) {
+    return (
+      <p className={styles.placeholderNote}>
+        {isPolling
+          ? "Summary generation is still running. Checking again in a few seconds."
+          : "Summary is not available yet."}
+      </p>
+    );
+  }
+
+  if (payload.status === "unavailable") {
+    return (
+      <p className={styles.placeholderNote}>
+        {isPolling
+          ? "Summary generation is still running. Checking again in a few seconds."
+          : payload.message}
+      </p>
+    );
+  }
+
+  return <ApplicationSummaryCard summary={payload.summary} />;
 }

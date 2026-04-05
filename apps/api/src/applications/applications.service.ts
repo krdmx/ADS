@@ -27,11 +27,9 @@ import {
 import { AccountService } from "../account/account.service";
 import { logHttpExchange } from "../logging/http-log.util";
 import { PrismaService } from "../prisma/prisma.service";
+import { ApplicationSummaryService } from "./application-summary.service";
 
-const APPLICATION_PIPELINE_MOCK_DELAY_MS = 900;
-const MOCK_PIPELINE_LOCKED_VACANCY_DESCRIPTION =
-  "Mock mode is enabled. The saved base CV is returned without vacancy-specific tailoring.";
-const PREVIEW_TEXT_LENGTH = 96;
+const APPLICATION_PIPELINE_CALLBACK_SECRET = "change-me-backend-secret";
 
 type SaveApplicationResultInput = {
   ticketId: string;
@@ -55,26 +53,6 @@ type PipelineDispatchInput = {
   workTasks: string;
 };
 
-type ApplicationPipelineMode = "live" | "mock";
-
-function parseBooleanEnv(value: string | undefined): boolean | undefined {
-  const normalized = value?.trim().toLowerCase();
-
-  if (!normalized) {
-    return undefined;
-  }
-
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-
-  return undefined;
-}
-
 const CALLBACK_RESULT_FIELDS = [
   "personalNote",
   "cvMarkdown",
@@ -96,7 +74,8 @@ export class ApplicationsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountService: AccountService
+    private readonly accountService: AccountService,
+    private readonly applicationSummaryService: ApplicationSummaryService
   ) {}
 
   async createApplication(
@@ -104,9 +83,19 @@ export class ApplicationsService {
     request: CreateApplicationRequest
   ): Promise<CreateApplicationResponse> {
     const companyName = this.requireText(request?.companyName, "companyName");
-    const vacancyDescription = this.isMockPipelineEnabled()
-      ? MOCK_PIPELINE_LOCKED_VACANCY_DESCRIPTION
-      : this.requireText(request?.vacancyDescription, "vacancyDescription");
+    const companyWebsite = this.optionalText(
+      request?.companyWebsite,
+      "companyWebsite"
+    );
+    const positionTitle = this.requireText(
+      request?.positionTitle,
+      "positionTitle"
+    );
+    const jdUrl = this.requireText(request?.jdUrl, "jdUrl");
+    const vacancyDescription = this.requireText(
+      request?.vacancyDescription,
+      "vacancyDescription"
+    );
 
     const [fullName, baseCv, workTasks] = await Promise.all([
       this.accountService.getRequiredProfileField(userId, "fullName"),
@@ -114,27 +103,46 @@ export class ApplicationsService {
       this.accountService.getRequiredProfileField(userId, "workTasks"),
     ]);
 
-    const ticket = await this.prisma.$transaction(async (tx) => {
-      await this.accountService.consumeGenerationQuota(userId, tx);
-
-      return tx.applicationTicket.create({
-        data: {
-          userId,
-          status: "processing",
-          companyName,
-          vacancyDescription,
-        },
-      });
+    const ticket = await this.prisma.applicationTicket.create({
+      data: {
+        userId,
+        status: "processing",
+        companyName,
+        companyWebsite,
+        positionTitle,
+        jdUrl,
+        vacancyDescription,
+      },
     });
 
-    await this.dispatchApplicationPipeline({
+    const pipelineInput: PipelineDispatchInput = {
       ticketId: ticket.id,
       companyName,
       fullName,
       vacancyDescription,
       baseCv,
       workTasks,
-    });
+    };
+    const [pipelineDispatchResult, summaryDispatchResult] =
+      await Promise.allSettled([
+        this.dispatchApplicationPipeline(pipelineInput),
+        this.applicationSummaryService.requestApplicationSummary(
+          userId,
+          ticket.id
+        ),
+      ]);
+
+    if (summaryDispatchResult.status === "rejected") {
+      this.logger.warn(
+        `Failed to trigger summary workflow for ticket ${ticket.id}: ${this.getErrorMessage(
+          summaryDispatchResult.reason
+        )}`
+      );
+    }
+
+    if (pipelineDispatchResult.status === "rejected") {
+      throw pipelineDispatchResult.reason;
+    }
 
     return {
       ticketId: ticket.id,
@@ -182,6 +190,9 @@ export class ApplicationsService {
       ticketId: ticket.id,
       status: ticket.status,
       companyName: ticket.companyName,
+      companyWebsite: ticket.companyWebsite,
+      positionTitle: ticket.positionTitle,
+      jdUrl: ticket.jdUrl,
       vacancyDescription: ticket.vacancyDescription,
       lastError: ticket.lastError,
       createdAt: ticket.createdAt.toISOString(),
@@ -230,12 +241,6 @@ export class ApplicationsService {
     userId: string,
     request: UpdateBaseCvRequest
   ): Promise<GetBaseCvResponse> {
-    if (this.isMockPipelineEnabled()) {
-      throw new BadRequestException(
-        "Base CV is locked while mock mode is enabled."
-      );
-    }
-
     const baseCv = await this.accountService.updateProfileField(
       userId,
       "baseCv",
@@ -372,11 +377,6 @@ export class ApplicationsService {
   private async dispatchApplicationPipeline(
     input: PipelineDispatchInput
   ): Promise<void> {
-    if (this.isMockPipelineEnabled()) {
-      this.scheduleMockApplicationResult(input);
-      return;
-    }
-
     await this.triggerWorkflow(input);
   }
 
@@ -446,28 +446,6 @@ export class ApplicationsService {
     }
   }
 
-  private scheduleMockApplicationResult(input: PipelineDispatchInput) {
-    setTimeout(() => {
-      void this.completeMockApplication(input).catch(async (error) => {
-        await this.markTicketFailed(
-          input.ticketId,
-          this.getErrorMessage(error)
-        );
-      });
-    }, APPLICATION_PIPELINE_MOCK_DELAY_MS);
-  }
-
-  private async completeMockApplication(
-    input: PipelineDispatchInput
-  ): Promise<void> {
-    await this.persistApplicationResult({
-      ticketId: input.ticketId,
-      personalNote: this.createMockPersonalNote(input),
-      cvMarkdown: this.createMockCvMarkdown(input),
-      coverLetterMarkdown: this.createMockCoverLetterMarkdown(input),
-    });
-  }
-
   private async persistApplicationResult(
     input: PersistApplicationResultInput
   ): Promise<void> {
@@ -506,23 +484,6 @@ export class ApplicationsService {
     });
   }
 
-  private isMockPipelineEnabled() {
-    return this.getApplicationPipelineMode() === "mock";
-  }
-
-  private getApplicationPipelineMode(): ApplicationPipelineMode {
-    const mockMode = parseBooleanEnv(process.env.MOCK_MODE);
-
-    if (mockMode !== undefined) {
-      return mockMode ? "mock" : "live";
-    }
-
-    return process.env.APPLICATION_PIPELINE_MODE?.trim().toLowerCase() ===
-      "mock"
-      ? "mock"
-      : "live";
-  }
-
   private getWebhookUrl(): string {
     const value = process.env.N8N_WORKFLOW_WEBHOOK_URL?.trim();
 
@@ -550,62 +511,8 @@ export class ApplicationsService {
 
     return url.toString();
   }
-
-  private createMockPersonalNote(input: PipelineDispatchInput): string {
-    return [
-      `Mock pipeline result for ${input.fullName} at ${input.companyName}.`,
-      "The saved base CV was returned as-is.",
-      `Locked vacancy: ${this.previewText(input.vacancyDescription)}.`,
-      `Work tasks preview: ${this.previewText(input.workTasks)}.`,
-    ].join(" ");
-  }
-
-  private createMockCvMarkdown(input: PipelineDispatchInput): string {
-    return input.baseCv;
-  }
-
-  private createMockCoverLetterMarkdown(input: PipelineDispatchInput): string {
-    return [
-      "# Cover Letter",
-      "",
-      `Dear Hiring Team at ${input.companyName},`,
-      "",
-      `This mock cover letter was generated for ${input.fullName}.`,
-      "The saved base CV was reused without vacancy-specific tailoring.",
-      `Locked vacancy: ${this.previewText(input.vacancyDescription)}.`,
-      "",
-      "## Why I fit",
-      `- Work tasks context: ${this.previewText(input.workTasks)}`,
-      "",
-      "Sincerely,",
-      input.fullName,
-    ].join("\n");
-  }
-
-  private previewText(value: string): string {
-    const normalized = value.replace(/\s+/g, " ").trim();
-
-    if (!normalized) {
-      return "not provided";
-    }
-
-    if (normalized.length <= PREVIEW_TEXT_LENGTH) {
-      return normalized;
-    }
-
-    return `${normalized.slice(0, PREVIEW_TEXT_LENGTH - 3).trimEnd()}...`;
-  }
-
   private getAppSecret(): string {
-    const value = process.env.BACKEND_APP_SECRET?.trim();
-
-    if (!value) {
-      throw new ServiceUnavailableException(
-        "Application result secret is not configured."
-      );
-    }
-
-    return value;
+    return APPLICATION_PIPELINE_CALLBACK_SECRET;
   }
 
   private getSaveApplicationResultFields(
@@ -741,6 +648,20 @@ export class ApplicationsService {
     }
 
     return normalized;
+  }
+
+  private optionalText(value: unknown, fieldName: string): string | null {
+    if (value == null) {
+      return null;
+    }
+
+    if (typeof value !== "string") {
+      throw new BadRequestException(`${fieldName} must be a string.`);
+    }
+
+    const normalized = value.trim();
+
+    return normalized ? normalized : null;
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

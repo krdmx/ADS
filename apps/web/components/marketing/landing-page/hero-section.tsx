@@ -4,7 +4,7 @@ import styles from "../landing-page.module.css";
 import { WhitelistJumpLink } from "../whitelist-jump-link";
 import { HeroScene, SectionReveal } from "./shared";
 
-const signInUrl = buildAppUrl("/auth/sign-in");
+const workspaceUrl = buildAppUrl("/");
 
 export function LandingPageHeroSection() {
   return (
@@ -25,8 +25,8 @@ export function LandingPageHeroSection() {
 
         <div className={styles.heroActions}>
           <WhitelistJumpLink />
-          <a className={styles.secondaryLink} href={signInUrl}>
-            Sign in to the app
+          <a className={styles.secondaryLink} href={workspaceUrl}>
+            Open the workspace
           </a>
         </div>
       </div>

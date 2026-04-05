@@ -27,7 +27,6 @@ export function ProfileEditor({
   initialBaseCvErrorMessage,
   initialWorkTasks,
   initialWorkTasksErrorMessage,
-  isMockPipelineEnabled = false,
 }: {
   initialFullName?: string;
   initialFullNameErrorMessage?: string | null;
@@ -35,7 +34,6 @@ export function ProfileEditor({
   initialBaseCvErrorMessage?: string | null;
   initialWorkTasks?: string;
   initialWorkTasksErrorMessage?: string | null;
-  isMockPipelineEnabled?: boolean;
 }) {
   const hasInitialFullName =
     initialFullName !== undefined || initialFullNameErrorMessage !== undefined;
@@ -192,14 +190,6 @@ export function ProfileEditor({
   }
 
   async function saveBaseCv() {
-    if (isMockPipelineEnabled) {
-      setBaseCvState({
-        kind: "error",
-        message: "Base CV is locked while backend mock mode is enabled.",
-      });
-      return;
-    }
-
     setBaseCvState({ kind: "saving" });
 
     try {
@@ -279,16 +269,11 @@ export function ProfileEditor({
                 type="button"
                 onClick={() => void saveBaseCv()}
                 disabled={
-                  isMockPipelineEnabled ||
                   baseCvState.kind === "loading" ||
                   baseCvState.kind === "saving"
                 }
               >
-                {isMockPipelineEnabled
-                  ? "Base CV Locked"
-                  : baseCvState.kind === "saving"
-                    ? "Saving..."
-                    : "Save Base CV"}
+                {baseCvState.kind === "saving" ? "Saving..." : "Save Base CV"}
               </button>
             </div>
             <textarea
@@ -296,14 +281,8 @@ export function ProfileEditor({
               value={baseCv}
               onChange={handleBaseCvChange}
               placeholder="Paste the base CV text here."
-              disabled={isMockPipelineEnabled || baseCvState.kind === "loading"}
+              disabled={baseCvState.kind === "loading"}
             />
-            {isMockPipelineEnabled ? (
-              <p className={styles.note}>
-                Base CV is locked while backend mock mode is enabled. Disable
-                mock mode to update it.
-              </p>
-            ) : null}
             <FieldStatus
               state={baseCvState}
               loadingMessage="Loading base CV..."

@@ -1,17 +1,6 @@
 export type DatabaseStatus = "up" | "down";
 export type ServiceStatus = "ok" | "degraded";
 export type ApplicationTicketStatus = "processing" | "completed" | "failed";
-export type AccountPlan = "free" | "paid" | "exclusive";
-export type SubscriptionStatus =
-  | "inactive"
-  | "active"
-  | "trialing"
-  | "past_due"
-  | "canceled"
-  | "unpaid"
-  | "incomplete"
-  | "incomplete_expired"
-  | "paused";
 export const APPLICATION_BOARD_STAGE_ORDER = [
   "resume_sent",
   "hr_screening",
@@ -58,6 +47,73 @@ export type ApplicationCompensationPeriod =
 export const APPLICATION_NORMALIZED_CURRENCY = "USD" as const;
 export type ApplicationNormalizedCurrency =
   typeof APPLICATION_NORMALIZED_CURRENCY;
+export const APPLICATION_COMPANY_SUMMARY_TYPES = [
+  "startup",
+  "scaleup",
+  "enterprise",
+  "agency",
+  "other",
+] as const;
+export type ApplicationCompanySummaryType =
+  (typeof APPLICATION_COMPANY_SUMMARY_TYPES)[number];
+export const APPLICATION_COMPANY_SUMMARY_SIZES = [
+  "1-10",
+  "11-50",
+  "51-200",
+  "201-500",
+  "500+",
+] as const;
+export type ApplicationCompanySummarySize =
+  (typeof APPLICATION_COMPANY_SUMMARY_SIZES)[number];
+export const APPLICATION_COMPANY_SUMMARY_BUSINESS_MODELS = [
+  "B2B",
+  "B2C",
+  "B2B2C",
+  "marketplace",
+  "other",
+] as const;
+export type ApplicationCompanySummaryBusinessModel =
+  (typeof APPLICATION_COMPANY_SUMMARY_BUSINESS_MODELS)[number];
+export const APPLICATION_COMPANY_SUMMARY_PRODUCT_TYPES = [
+  "SaaS",
+  "mobile app",
+  "platform",
+  "service",
+  "hardware",
+  "other",
+] as const;
+export type ApplicationCompanySummaryProductType =
+  (typeof APPLICATION_COMPANY_SUMMARY_PRODUCT_TYPES)[number];
+export const APPLICATION_COMPANY_SUMMARY_FUNDING_STAGES = [
+  "bootstrapped",
+  "pre-seed",
+  "seed",
+  "series_a",
+  "series_b",
+  "series_c",
+  "public",
+  "unknown",
+] as const;
+export type ApplicationCompanySummaryFundingStage =
+  (typeof APPLICATION_COMPANY_SUMMARY_FUNDING_STAGES)[number];
+export const APPLICATION_COMPANY_SUMMARY_WORK_STYLES = [
+  "remote",
+  "hybrid",
+  "office",
+] as const;
+export type ApplicationCompanySummaryWorkStyle =
+  (typeof APPLICATION_COMPANY_SUMMARY_WORK_STYLES)[number];
+export const APPLICATION_VACANCY_SUMMARY_SENIORITIES = [
+  "intern",
+  "junior",
+  "middle",
+  "senior",
+  "lead",
+  "principal",
+  "unknown",
+] as const;
+export type ApplicationVacancySummarySeniority =
+  (typeof APPLICATION_VACANCY_SUMMARY_SENIORITIES)[number];
 
 export interface ApiStatusResponse {
   service: string;
@@ -68,46 +124,12 @@ export interface ApiStatusResponse {
   version: string;
 }
 
-export interface AccountUserResponse {
-  id: string;
-  email: string;
-  name: string | null;
-  image: string | null;
-}
-
-export interface GetAccountResponse {
-  user: AccountUserResponse;
-  plan: AccountPlan;
-  subscriptionStatus: SubscriptionStatus;
-  usedThisMonth: number;
-  monthlyLimit: number;
-  remainingThisMonth: number;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  canCreateApplications: boolean;
-  quotaBypassed: boolean;
-  hasCustomerPortal: boolean;
-}
-
-export interface CreateBillingSessionResponse {
-  url: string;
-}
-
-export interface QuotaExceededErrorResponse {
-  code: "quota_exceeded";
-  message: string;
-  plan: AccountPlan;
-  subscriptionStatus: SubscriptionStatus;
-  usedThisMonth: number;
-  monthlyLimit: number;
-  remainingThisMonth: number;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-}
-
 export interface CreateApplicationRequest {
   vacancyDescription: string;
   companyName: string;
+  companyWebsite?: string;
+  positionTitle: string;
+  jdUrl: string;
 }
 
 export interface CreateApplicationResponse {
@@ -129,6 +151,88 @@ export interface ApplicationTicketListItemResponse {
 export interface GetApplicationsResponse {
   applications: ApplicationTicketListItemResponse[];
 }
+
+export interface ApplicationCompanySummaryCompanyResponse {
+  name: string;
+  type: ApplicationCompanySummaryType | null;
+  size: ApplicationCompanySummarySize | null;
+  industry: string | null;
+  business_model: ApplicationCompanySummaryBusinessModel | null;
+  product_type: ApplicationCompanySummaryProductType | null;
+  founded: string | null;
+  hq: string | null;
+  funding_stage: ApplicationCompanySummaryFundingStage | null;
+}
+
+export interface ApplicationCompanySummaryCultureResponse {
+  values: string[];
+  work_style: ApplicationCompanySummaryWorkStyle | null;
+  engineering_culture: string | null;
+}
+
+export interface ApplicationCompanySummaryFlagsResponse {
+  green: string[];
+  red: string[];
+}
+
+export interface ApplicationCompanySummaryResponse {
+  company: ApplicationCompanySummaryCompanyResponse;
+  culture: ApplicationCompanySummaryCultureResponse;
+  flags: ApplicationCompanySummaryFlagsResponse;
+}
+
+export interface ApplicationVacancySummarySalaryRangeResponse {
+  min: number | null;
+  max: number | null;
+  currency: string | null;
+}
+
+export interface ApplicationVacancySummaryPositionResponse {
+  title: string;
+  seniority: ApplicationVacancySummarySeniority;
+  team_context: string;
+  key_tasks: string[];
+  required_stack: string[];
+  nice_to_have_stack: string[];
+  salary_range: ApplicationVacancySummarySalaryRangeResponse;
+  interview_process: string[];
+  growth_opportunities: string | null;
+}
+
+export interface ApplicationVacancySummarySmartQuestionsResponse {
+  hr: string[];
+  tech: string[];
+}
+
+export interface ApplicationVacancySummaryScreeningPrepResponse {
+  why_hire_me: string[];
+  smart_questions: ApplicationVacancySummarySmartQuestionsResponse;
+}
+
+export interface ApplicationVacancySummaryResponse {
+  position: ApplicationVacancySummaryPositionResponse;
+  screening_prep: ApplicationVacancySummaryScreeningPrepResponse;
+}
+
+export interface ApplicationCombinedSummaryResponse {
+  companySummary: ApplicationCompanySummaryResponse;
+  vacancySummary: ApplicationVacancySummaryResponse | null;
+}
+
+export interface AvailableApplicationSummaryResponse {
+  status: "available";
+  summary: ApplicationCombinedSummaryResponse;
+}
+
+export interface UnavailableApplicationSummaryResponse {
+  status: "unavailable";
+  reason: "not_saved";
+  message: string;
+}
+
+export type GetApplicationSummaryResponse =
+  | AvailableApplicationSummaryResponse
+  | UnavailableApplicationSummaryResponse;
 
 export interface ApplicationBoardQuestionResponse {
   id: string;
@@ -202,11 +306,20 @@ export interface GetApplicationTicketResponse {
   ticketId: string;
   status: ApplicationTicketStatus;
   companyName: string;
+  companyWebsite: string | null;
+  positionTitle: string | null;
+  jdUrl: string | null;
   vacancyDescription: string;
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
   result: ApplicationTicketResultResponse | null;
+}
+
+export interface SaveApplicationSummaryRequest {
+  ticketId: string;
+  companySummary: ApplicationCompanySummaryResponse;
+  vacancySummary?: ApplicationVacancySummaryResponse | null;
 }
 
 export interface SaveApplicationResultRequest {
@@ -287,17 +400,6 @@ export interface GetWorkTasksResponse {
 
 export interface UpdateWorkTasksRequest {
   workTasks: string;
-}
-
-export interface SyncGoogleUserRequest {
-  googleSub: string;
-  email: string;
-  name?: string | null;
-  image?: string | null;
-}
-
-export interface SyncGoogleUserResponse {
-  user: AccountUserResponse;
 }
 
 export interface JoinWhitelistRequest {

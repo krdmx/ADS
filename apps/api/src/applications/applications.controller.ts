@@ -6,9 +6,11 @@ import type {
   ExportApplicationPdfRequest,
   GetApplicationBoardResponse,
   GetApplicationsResponse,
+  GetApplicationSummaryResponse,
   GetApplicationTicketResponse,
   GetBaseCvResponse,
   GetFullNameResponse,
+  SaveApplicationSummaryRequest,
   GetWorkTasksResponse,
   SaveApplicationResultRequest,
   TransitionApplicationBoardStageRequest,
@@ -30,13 +32,12 @@ import {
   Post,
   Put,
   StreamableFile,
-  UseGuards,
 } from "@nestjs/common";
 
-import { CurrentUser, type InternalRequestUser } from "../internal-auth/current-user.decorator";
-import { InternalUserGuard } from "../internal-auth/internal-user.guard";
+import { AccountService } from "../account/account.service";
 import { PdfService } from "../pdf/pdf.service";
 import { ApplicationBoardService } from "./application-board.service";
+import { ApplicationSummaryService } from "./application-summary.service";
 import { ApplicationsService } from "./applications.service";
 
 @Controller("api/v1/applications")
@@ -44,93 +45,117 @@ export class ApplicationsController {
   constructor(
     private readonly applicationsService: ApplicationsService,
     private readonly applicationBoardService: ApplicationBoardService,
+    private readonly applicationSummaryService: ApplicationSummaryService,
+    private readonly accountService: AccountService,
     private readonly pdfService: PdfService
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  @UseGuards(InternalUserGuard)
   async createApplication(
-    @CurrentUser() user: InternalRequestUser,
     @Body() body: CreateApplicationRequest
   ): Promise<CreateApplicationResponse> {
-    return this.applicationsService.createApplication(user.userId, body);
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.createApplication(userId, body);
   }
 
   @Get()
-  @UseGuards(InternalUserGuard)
-  async listApplications(
-    @CurrentUser() user: InternalRequestUser
-  ): Promise<GetApplicationsResponse> {
-    return this.applicationsService.listApplications(user.userId);
+  async listApplications(): Promise<GetApplicationsResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.listApplications(userId);
   }
 
   @Get("board")
-  @UseGuards(InternalUserGuard)
-  async getApplicationBoard(
-    @CurrentUser() user: InternalRequestUser
-  ): Promise<GetApplicationBoardResponse> {
-    return this.applicationBoardService.listApplicationBoard(user.userId);
+  async getApplicationBoard(): Promise<GetApplicationBoardResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationBoardService.listApplicationBoard(userId);
   }
 
   @Get("baseCv")
-  @UseGuards(InternalUserGuard)
-  async getBaseCv(
-    @CurrentUser() user: InternalRequestUser
-  ): Promise<GetBaseCvResponse> {
-    return this.applicationsService.getBaseCv(user.userId);
+  async getBaseCv(): Promise<GetBaseCvResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.getBaseCv(userId);
   }
 
   @Get("fullName")
-  @UseGuards(InternalUserGuard)
-  async getFullName(
-    @CurrentUser() user: InternalRequestUser
-  ): Promise<GetFullNameResponse> {
-    return this.applicationsService.getFullName(user.userId);
+  async getFullName(): Promise<GetFullNameResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.getFullName(userId);
   }
 
   @Get("workTasks")
-  @UseGuards(InternalUserGuard)
-  async getWorkTasks(
-    @CurrentUser() user: InternalRequestUser
-  ): Promise<GetWorkTasksResponse> {
-    return this.applicationsService.getWorkTasks(user.userId);
+  async getWorkTasks(): Promise<GetWorkTasksResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.getWorkTasks(userId);
   }
 
   @Put("baseCv")
-  @UseGuards(InternalUserGuard)
   async updateBaseCv(
-    @CurrentUser() user: InternalRequestUser,
     @Body() body: UpdateBaseCvRequest
   ): Promise<GetBaseCvResponse> {
-    return this.applicationsService.updateBaseCv(user.userId, body);
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.updateBaseCv(userId, body);
   }
 
   @Put("fullName")
-  @UseGuards(InternalUserGuard)
   async updateFullName(
-    @CurrentUser() user: InternalRequestUser,
     @Body() body: UpdateFullNameRequest
   ): Promise<GetFullNameResponse> {
-    return this.applicationsService.updateFullName(user.userId, body);
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.updateFullName(userId, body);
   }
 
   @Put("workTasks")
-  @UseGuards(InternalUserGuard)
   async updateWorkTasks(
-    @CurrentUser() user: InternalRequestUser,
     @Body() body: UpdateWorkTasksRequest
   ): Promise<GetWorkTasksResponse> {
-    return this.applicationsService.updateWorkTasks(user.userId, body);
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.updateWorkTasks(userId, body);
+  }
+
+  @Get(":ticketId/summary")
+  async getApplicationSummary(
+    @Param("ticketId") ticketId: string
+  ): Promise<GetApplicationSummaryResponse> {
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationSummaryService.getApplicationSummary(
+      userId,
+      ticketId
+    );
+  }
+
+  @Post(":ticketId/summary/generate")
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requestApplicationSummary(
+    @Param("ticketId") ticketId: string
+  ): Promise<void> {
+    const userId = await this.accountService.getLocalUserId();
+    await this.applicationSummaryService.requestApplicationSummary(
+      userId,
+      ticketId
+    );
+  }
+
+  @Post(":ticketId/summary")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async uploadSummary(
+    @Param("ticketId") ticketId: string,
+    @Headers("x-app-secret") appSecret: string | undefined,
+    @Body() body: SaveApplicationSummaryRequest
+  ): Promise<void> {
+    await this.applicationSummaryService.saveApplicationSummary({
+      ticketId,
+      appSecret,
+      request: body,
+    });
   }
 
   @Get(":ticketId")
-  @UseGuards(InternalUserGuard)
   async getApplicationTicket(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string
   ): Promise<GetApplicationTicketResponse> {
-    return this.applicationsService.getApplicationTicket(user.userId, ticketId);
+    const userId = await this.accountService.getLocalUserId();
+    return this.applicationsService.getApplicationTicket(userId, ticketId);
   }
 
   @Post(":ticketId/result")
@@ -148,29 +173,27 @@ export class ApplicationsController {
   }
 
   @Put(":ticketId/result")
-  @UseGuards(InternalUserGuard)
   async updateResult(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string,
     @Body() body: UpdateApplicationResultRequest
   ): Promise<ApplicationTicketResultResponse> {
+    const userId = await this.accountService.getLocalUserId();
     return this.applicationsService.updateApplicationResult(
-      user.userId,
+      userId,
       ticketId,
       body
     );
   }
 
   @Put(":ticketId/tracker/stages/:stageKey")
-  @UseGuards(InternalUserGuard)
   async updateTrackerStage(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string,
     @Param("stageKey") stageKey: string,
     @Body() body: UpdateApplicationBoardStageRequest
   ) {
+    const userId = await this.accountService.getLocalUserId();
     return this.applicationBoardService.updateApplicationTrackerStage(
-      user.userId,
+      userId,
       ticketId,
       stageKey,
       body
@@ -178,14 +201,13 @@ export class ApplicationsController {
   }
 
   @Post(":ticketId/tracker/transitions")
-  @UseGuards(InternalUserGuard)
   async transitionTrackerStage(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string,
     @Body() body: TransitionApplicationBoardStageRequest
   ) {
+    const userId = await this.accountService.getLocalUserId();
     return this.applicationBoardService.transitionApplicationTrackerStage(
-      user.userId,
+      userId,
       ticketId,
       body
     );
@@ -193,13 +215,12 @@ export class ApplicationsController {
 
   @Post(":ticketId/pdf")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(InternalUserGuard)
   async exportPdf(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string,
     @Body() body: ExportApplicationPdfRequest
   ): Promise<StreamableFile> {
-    await this.applicationsService.assertTicketAccess(user.userId, ticketId);
+    const userId = await this.accountService.getLocalUserId();
+    await this.applicationsService.assertTicketAccess(userId, ticketId);
 
     const { buffer, fileName } = await this.pdfService.renderApplicationPdf({
       ticketId,
@@ -216,13 +237,12 @@ export class ApplicationsController {
 
   @Post(":ticketId/archive")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(InternalUserGuard)
   async exportArchive(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string,
     @Body() body: ExportApplicationArchiveRequest
   ): Promise<StreamableFile> {
-    await this.applicationsService.assertTicketAccess(user.userId, ticketId);
+    const userId = await this.accountService.getLocalUserId();
+    await this.applicationsService.assertTicketAccess(userId, ticketId);
 
     const { buffer, fileName } =
       await this.pdfService.renderApplicationArchive({
@@ -240,11 +260,10 @@ export class ApplicationsController {
 
   @Delete(":ticketId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(InternalUserGuard)
   async deleteApplication(
-    @CurrentUser() user: InternalRequestUser,
     @Param("ticketId") ticketId: string
   ): Promise<void> {
-    await this.applicationsService.deleteApplication(user.userId, ticketId);
+    const userId = await this.accountService.getLocalUserId();
+    await this.applicationsService.deleteApplication(userId, ticketId);
   }
 }

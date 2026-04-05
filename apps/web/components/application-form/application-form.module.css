@@ -37,38 +37,6 @@
   margin: 1rem 0 0;
 }
 
-.quotaPanel {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 1.35rem;
-  padding: 1rem 1.05rem;
-  border: 1px solid rgba(var(--accent-rgb), 0.24);
-  border-radius: 1.2rem;
-  background: rgba(var(--accent-rgb), 0.14);
-}
-
-.quotaLabel {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.quotaValue {
-  display: block;
-  margin-top: 0.35rem;
-  color: var(--ink);
-  font-size: 1.15rem;
-}
-
-.quotaHint {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
 .composerForm {
   display: grid;
   gap: 1rem;

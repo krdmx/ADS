@@ -145,6 +145,9 @@ type BoardTicketRecord = {
   lastError: string | null;
   createdAt: Date;
   updatedAt: Date;
+  companySummary: {
+    ticketId: string;
+  } | null;
   result: {
     cvMarkdown: string;
     coverLetterMarkdown: string;
@@ -194,6 +197,11 @@ export class ApplicationBoardService {
         createdAt: "desc",
       },
       include: {
+        companySummary: {
+          select: {
+            ticketId: true,
+          },
+        },
         result: {
           select: {
             cvMarkdown: true,
@@ -517,6 +525,11 @@ export class ApplicationBoardService {
         userId,
       },
       include: {
+        companySummary: {
+          select: {
+            ticketId: true,
+          },
+        },
         result: {
           select: {
             cvMarkdown: true,
@@ -574,7 +587,7 @@ export class ApplicationBoardService {
       assets: {
         hasGeneratedCv: Boolean(ticket.result?.cvMarkdown.trim()),
         hasCoverLetter: Boolean(ticket.result?.coverLetterMarkdown.trim()),
-        hasCompanySummary: false,
+        hasCompanySummary: ticket.companySummary !== null,
       },
       offerCompensation: hrStage?.compensation ?? null,
     };

@@ -4,7 +4,7 @@ import { buildAppUrl } from "@/lib/app-urls";
 
 import styles from "../landing-page.module.css";
 
-const signInUrl = buildAppUrl("/auth/sign-in");
+const workspaceUrl = buildAppUrl("/");
 
 export function LandingPageFooter() {
   return (
@@ -16,7 +16,7 @@ export function LandingPageFooter() {
         <span>Fitev keeps every application move in view.</span>
       </div>
 
-      <a className={styles.footerLink} href={signInUrl}>
+      <a className={styles.footerLink} href={workspaceUrl}>
         Enter the workspace
         <ArrowUpRight size={16} />
       </a>

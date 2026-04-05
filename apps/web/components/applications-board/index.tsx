@@ -43,10 +43,12 @@ import {
 import styles from "./applications-board.module.css";
 
 export function ApplicationsBoard({
+  enableSummaryTestActions,
   initialPayload,
   initialErrorMessage,
   initialSelectedTicketId,
 }: {
+  enableSummaryTestActions: boolean;
   initialPayload?: GetApplicationBoardResponse;
   initialErrorMessage?: string | null;
   initialSelectedTicketId?: string;
@@ -436,6 +438,7 @@ export function ApplicationsBoard({
 
       {selectedTicket ? (
         <BoardSidePanel
+          enableSummaryTestActions={enableSummaryTestActions}
           ticket={selectedTicket}
           jobSiteOptions={jobSiteOptions}
           normalizedCurrency={normalizedCurrency}

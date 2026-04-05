@@ -9,12 +9,10 @@ import { ProfileEditor } from "@/components/profile-editor";
 import { SiteHeader } from "@/components/site-header";
 import { getErrorMessage } from "@/lib/api-response";
 import { getAuthenticatedServerApi } from "@/lib/server-api";
-import { getWebFeatures } from "@/lib/web-features";
 import styles from "./page.module.css";
 
 export default async function ProfilePage() {
   await connection();
-  const { mockPipelineEnabled } = getWebFeatures();
   const api = await getAuthenticatedServerApi();
 
   const [fullNameResult, baseCvResult, workTasksResult] =
@@ -63,7 +61,6 @@ export default async function ProfilePage() {
           initialBaseCvErrorMessage={baseCvErrorMessage}
           initialWorkTasks={workTasksPayload?.workTasks}
           initialWorkTasksErrorMessage={workTasksErrorMessage}
-          isMockPipelineEnabled={mockPipelineEnabled}
         />
       </section>
     </main>

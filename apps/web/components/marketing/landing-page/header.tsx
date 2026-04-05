@@ -9,7 +9,7 @@ const navigationItems = [
   { href: "#whitelist", label: "Access" },
 ];
 
-const signInUrl = buildAppUrl("/auth/sign-in");
+const workspaceUrl = buildAppUrl("/");
 
 export function LandingPageHeader() {
   return (
@@ -41,8 +41,8 @@ export function LandingPageHeader() {
         <a className={styles.headerButton} href="#whitelist">
           Join whitelist
         </a>
-        <a className={styles.secondaryLink} href={signInUrl}>
-          Sign in
+        <a className={styles.secondaryLink} href={workspaceUrl}>
+          Open app
         </a>
       </div>
     </header>

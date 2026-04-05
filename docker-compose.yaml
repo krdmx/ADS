@@ -9,10 +9,6 @@ services:
         condition: service_healthy
       n8n:
         condition: service_healthy
-    environment:
-      APP_HOST: ${APP_HOST}
-      API_HOST: ${API_HOST}
-      N8N_HOST: ${N8N_HOST}
     ports:
       - "80:80"
     volumes:
@@ -22,10 +18,6 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-        NEXT_PUBLIC_MARKETING_URL: ${NEXT_PUBLIC_MARKETING_URL}
     restart: unless-stopped
     depends_on:
       api:
@@ -34,18 +26,6 @@ services:
       - "api.localhost:host-gateway"
     environment:
       NODE_ENV: production
-      APP_MODE: ${APP_MODE:-production}
-      MOCK_MODE: ${MOCK_MODE:-false}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      NEXT_PUBLIC_MARKETING_URL: ${NEXT_PUBLIC_MARKETING_URL}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      AUTH_SECRET: ${AUTH_SECRET}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      INTERNAL_API_SHARED_SECRET: ${INTERNAL_API_SHARED_SECRET}
-      WEB_HIDE_API_ENDPOINTS: ${WEB_HIDE_API_ENDPOINTS:-true}
-      WEB_ENABLE_STATUS_PAGE: ${WEB_ENABLE_STATUS_PAGE:-false}
     healthcheck:
       test:
         [
@@ -69,26 +49,13 @@ services:
         condition: service_healthy
       gotenberg:
         condition: service_started
+      n8n:
+        condition: service_started
     environment:
       NODE_ENV: production
-      APP_MODE: ${APP_MODE:-production}
-      MOCK_MODE: ${MOCK_MODE:-false}
-      APPLICATION_PIPELINE_MODE: ${APPLICATION_PIPELINE_MODE:-live}
-      BACKEND_PORT: ${BACKEND_PORT}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
-      DATABASE_URL: ${DATABASE_URL}
-      BACKEND_APP_SECRET: ${BACKEND_APP_SECRET}
-      INTERNAL_API_SHARED_SECRET: ${INTERNAL_API_SHARED_SECRET}
-      FREE_PLAN_MONTHLY_GENERATION_LIMIT: ${FREE_PLAN_MONTHLY_GENERATION_LIMIT:-3}
-      PAID_PLAN_MONTHLY_GENERATION_LIMIT: ${PAID_PLAN_MONTHLY_GENERATION_LIMIT:-50}
-      LOCAL_QUOTA_BYPASS_EMAILS: ${LOCAL_QUOTA_BYPASS_EMAILS:-}
-      BILLING_MODE: ${BILLING_MODE:-mock}
-      GOTENBERG_URL: http://gotenberg:3000
-      N8N_WORKFLOW_WEBHOOK_URL: ${N8N_WORKFLOW_WEBHOOK_URL:-http://n8n:5678/webhook/generate-cv}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PRICE_ID_MONTHLY: ${STRIPE_PRICE_ID_MONTHLY}
+      DATABASE_URL: postgresql://pep:pep@postgres:5432/pep?schema=public
+      N8N_WORKFLOW_WEBHOOK_URL: http://n8n:5678/webhook/generate-cv
+      N8N_SUMMARY_WORKFLOW_WEBHOOK_URL: http://n8n:5678/webhook/generate-summary
     healthcheck:
       test:
         [
@@ -104,16 +71,17 @@ services:
 
   postgres:
     image: postgres:16.9-alpine3.22
+    command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf"]
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: pep
+      POSTGRES_USER: pep
+      POSTGRES_PASSWORD: pep
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
-      test:
-        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -126,41 +94,27 @@ services:
     depends_on:
       gotenberg:
         condition: service_started
-        
     environment:
       NODE_ENV: production
-      N8N_HOST: ${N8N_HOST}
-      N8N_PROTOCOL: ${N8N_PROTOCOL}
-      N8N_PORT: ${N8N_PORT}
-      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
-      WEBHOOK_URL: ${WEBHOOK_URL}
-      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
-      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE}
-      N8N_IMPORT_SEED: ${N8N_IMPORT_SEED}
-      N8N_IMPORT_CREDENTIALS: ${N8N_IMPORT_CREDENTIALS:-true}
-      N8N_GOOGLE_DOCS_CREDENTIAL_NAME: ${N8N_GOOGLE_DOCS_CREDENTIAL_NAME:-Google Docs account}
-      N8N_GOOGLE_SERVICE_ACCOUNT_EMAIL: ${N8N_GOOGLE_SERVICE_ACCOUNT_EMAIL:-}
-      N8N_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${N8N_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:-}
-      N8N_GOOGLE_SERVICE_ACCOUNT_IMPERSONATE: ${N8N_GOOGLE_SERVICE_ACCOUNT_IMPERSONATE:-false}
-      N8N_GOOGLE_SERVICE_ACCOUNT_DELEGATED_EMAIL: ${N8N_GOOGLE_SERVICE_ACCOUNT_DELEGATED_EMAIL:-}
-      N8N_GOOGLE_GEMINI_CREDENTIAL_NAME: ${N8N_GOOGLE_GEMINI_CREDENTIAL_NAME:-Google Gemini(PaLM) Api account}
-      N8N_GOOGLE_GEMINI_API_HOST: ${N8N_GOOGLE_GEMINI_API_HOST:-https://generativelanguage.googleapis.com}
-      BACKEND_APP_SECRET: ${BACKEND_APP_SECRET}
-      GOOGLE_DOCS_CLIENT_ID: ${GOOGLE_DOCS_CLIENT_ID}
-      GOOGLE_DOCS_CLIENT_SECRET: ${GOOGLE_DOCS_CLIENT_SECRET}
+      N8N_HOST: n8n.localhost
+      N8N_PROTOCOL: http
+      N8N_PORT: 5678
+      N8N_EDITOR_BASE_URL: http://n8n.localhost
+      WEBHOOK_URL: http://n8n.localhost/
+      N8N_BASIC_AUTH_ACTIVE: false
+      N8N_ENCRYPTION_KEY: pep-local-n8n-encryption-key
+      N8N_SECURE_COOKIE: false
+      N8N_IMPORT_SEED: true
+      N8N_IMPORT_CREDENTIALS: true
       GOOGLE_GEMINI_API_KEY: ${GOOGLE_GEMINI_API_KEY}
-    volumes:
-      - n8n_storage:/home/node/.n8n
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:5678').then((response)=>process.exit(response.ok||response.status===401?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:5678').then((response)=>process.exit(response.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 15s
       timeout: 5s
@@ -174,4 +128,3 @@ services:
 
 volumes:
   postgres_data:
-  n8n_storage:

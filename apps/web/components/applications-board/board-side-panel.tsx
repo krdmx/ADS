@@ -7,6 +7,7 @@ import type {
   ApplicationCompensationCurrency,
   ApplicationCompensationPeriod,
   ApplicationJobSitePreset,
+  GetApplicationSummaryResponse,
   GetBaseCvResponse,
   GetApplicationTicketResponse,
   UpdateApplicationBoardStageRequest,
@@ -22,6 +23,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
+import { ApplicationSummaryCard } from "@/components/application-summary-card";
 import { MarkdownSheet } from "@/components/markdown-sheet";
 import { api, getErrorMessage } from "@/lib/api";
 import {
@@ -45,6 +47,7 @@ import {
 } from "./shared";
 
 type BoardSidePanelProps = {
+  enableSummaryTestActions: boolean;
   jobSiteOptions: readonly ApplicationJobSitePreset[];
   normalizedCurrency: string;
   onClose: () => void;
@@ -56,7 +59,18 @@ type BoardSidePanelProps = {
   ticket: ApplicationBoardTicketResponse;
 };
 
+type PreviewTab = "summary" | "resume";
+
+const APPLICATION_GENERATION_POLL_INTERVAL_MS = 3_000;
+
+function shouldPollTicketResult(
+  ticket: GetApplicationTicketResponse | null | undefined
+) {
+  return Boolean(ticket && ticket.status === "processing" && !ticket.result);
+}
+
 export function BoardSidePanel({
+  enableSummaryTestActions,
   jobSiteOptions,
   normalizedCurrency,
   onClose,
@@ -66,11 +80,25 @@ export function BoardSidePanel({
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [ticketDetails, setTicketDetails] =
     useState<GetApplicationTicketResponse | null>(null);
+  const [summaryPayload, setSummaryPayload] =
+    useState<GetApplicationSummaryResponse | null>(null);
   const [baseCv, setBaseCv] = useState("");
   const [ticketDetailsError, setTicketDetailsError] = useState<string | null>(
     null
   );
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [summaryActionMessage, setSummaryActionMessage] = useState<
+    string | null
+  >(null);
   const [isTicketDetailsLoading, setIsTicketDetailsLoading] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isSummaryGenerationLoading, setIsSummaryGenerationLoading] =
+    useState(false);
+  const [isSummaryPolling, setIsSummaryPolling] = useState(false);
+  const [isResumePolling, setIsResumePolling] = useState(false);
+  const [summaryRefreshKey, setSummaryRefreshKey] = useState(0);
+  const [activePreviewTab, setActivePreviewTab] =
+    useState<PreviewTab>("summary");
   const [openStages, setOpenStages] = useState<ApplicationBoardStage[]>([
     ticket.currentStage,
   ]);
@@ -120,59 +148,68 @@ export function BoardSidePanel({
   }, [onClose]);
 
   useEffect(() => {
+    setTicketDetails(null);
+    setBaseCv("");
+    setTicketDetailsError(null);
+  }, [ticket.ticketId]);
+
+  useEffect(() => {
     setOpenStages([ticket.currentStage]);
     setDraft(createDraftFromStage(ticket.currentStage, currentStageRecord));
     setSaveState({ kind: "idle" });
+    setActivePreviewTab("summary");
+    setSummaryPayload(null);
+    setSummaryError(null);
+    setSummaryActionMessage(null);
+    setIsSummaryLoading(false);
+    setIsSummaryGenerationLoading(false);
+    setIsSummaryPolling(false);
+    setIsResumePolling(false);
+    setSummaryRefreshKey(0);
   }, [ticket.currentStage, ticket.ticketId, currentStageRecord.updatedAt]);
 
   useEffect(() => {
     let active = true;
+    let timeoutId: number | undefined;
 
-    async function loadTicketDetails() {
-      setIsTicketDetailsLoading(true);
-      setTicketDetails(null);
-      setBaseCv("");
-      setTicketDetailsError(null);
+    async function loadTicketDetails(background = false) {
+      if (!background) {
+        setIsTicketDetailsLoading(true);
+        setTicketDetailsError(null);
+      }
 
       try {
-        const [ticketResponse, baseCvResponse] = await Promise.allSettled([
-          api.get<GetApplicationTicketResponse>(
-            `/api/v1/applications/${ticket.ticketId}`,
-            {
-              fetchOptions: {
-                cache: "no-store",
-              },
-            }
-          ),
-          api.get<GetBaseCvResponse>("/api/v1/applications/baseCv", {
+        const { data } = await api.get<GetApplicationTicketResponse>(
+          `/api/v1/applications/${ticket.ticketId}`,
+          {
             fetchOptions: {
               cache: "no-store",
             },
-          }),
-        ]);
+          }
+        );
 
         if (!active) {
           return;
         }
 
-        if (ticketResponse.status === "rejected") {
-          setTicketDetailsError(getErrorMessage(ticketResponse.reason));
+        setTicketDetails(data);
+
+        if (shouldPollTicketResult(data)) {
+          setIsResumePolling(true);
+          timeoutId = window.setTimeout(() => {
+            void loadTicketDetails(true);
+          }, APPLICATION_GENERATION_POLL_INTERVAL_MS);
           return;
         }
 
-        setTicketDetails(ticketResponse.value.data);
-
-        if (baseCvResponse.status === "fulfilled") {
-          setBaseCv(baseCvResponse.value.data.baseCv);
-        } else {
-          setBaseCv("");
-        }
+        setIsResumePolling(false);
       } catch (error) {
         if (active) {
+          setIsResumePolling(false);
           setTicketDetailsError(getErrorMessage(error));
         }
       } finally {
-        if (active) {
+        if (active && !background) {
           setIsTicketDetailsLoading(false);
         }
       }
@@ -182,8 +219,128 @@ export function BoardSidePanel({
 
     return () => {
       active = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [ticket.ticketId]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadBaseCv() {
+      try {
+        const { data } = await api.get<GetBaseCvResponse>(
+          "/api/v1/applications/baseCv",
+          {
+            fetchOptions: {
+              cache: "no-store",
+            },
+          }
+        );
+
+        if (active) {
+          setBaseCv(data.baseCv);
+        }
+      } catch {
+        if (active) {
+          setBaseCv("");
+        }
+      }
+    }
+
+    void loadBaseCv();
+
+    return () => {
+      active = false;
+    };
+  }, [ticket.ticketId]);
+
+  useEffect(() => {
+    let active = true;
+    let timeoutId: number | undefined;
+
+    async function loadSummary(background = false) {
+      if (!background) {
+        setIsSummaryLoading(true);
+      }
+
+      setSummaryError(null);
+
+      try {
+        const { data } = await api.get<GetApplicationSummaryResponse>(
+          `/api/v1/applications/${ticket.ticketId}/summary`,
+          {
+            fetchOptions: {
+              cache: "no-store",
+            },
+          }
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setSummaryPayload(data);
+
+        if (data.status === "available") {
+          setIsSummaryPolling(false);
+          return;
+        }
+
+        setIsSummaryPolling(true);
+        timeoutId = window.setTimeout(() => {
+          void loadSummary(true);
+        }, APPLICATION_GENERATION_POLL_INTERVAL_MS);
+      } catch (error) {
+        if (active) {
+          setSummaryPayload(null);
+          setSummaryError(getErrorMessage(error));
+          setIsSummaryPolling(false);
+        }
+      } finally {
+        if (active && !background) {
+          setIsSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      active = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [summaryRefreshKey, ticket.ticketId]);
+
+  async function handleSummaryGeneration() {
+    setIsSummaryGenerationLoading(true);
+    setSummaryError(null);
+    setSummaryActionMessage(null);
+
+    try {
+      await api.post<void>(
+        `/api/v1/applications/${ticket.ticketId}/summary/generate`,
+        undefined,
+        {
+          fetchOptions: {
+            cache: "no-store",
+          },
+        }
+      );
+
+      setSummaryActionMessage(
+        "Summary generation requested again. Auto-checking every 3 seconds."
+      );
+      setSummaryRefreshKey((current) => current + 1);
+    } catch (error) {
+      setSummaryError(getErrorMessage(error));
+    } finally {
+      setIsSummaryGenerationLoading(false);
+    }
+  }
 
   async function handleSave() {
     if (ticket.currentStage === "failed" && !draft.failureReason.trim()) {
@@ -241,9 +398,6 @@ export function BoardSidePanel({
           <div>
             <p className={styles.panelEyebrow}>Application Tracker</p>
             <h2 className={styles.panelTitle}>{ticket.companyName}</h2>
-            <p className={styles.panelDescription}>
-              {ticket.vacancyDescription.slice(0, 300)}...
-            </p>
           </div>
 
           <div className={styles.panelHeaderActions}>
@@ -275,7 +429,9 @@ export function BoardSidePanel({
           </div>
           <div className={styles.summaryCard}>
             <p className={styles.summaryLabel}>Pipeline status</p>
-            <ApplicationStatusBadge status={ticket.pipelineStatus} />
+            <ApplicationStatusBadge
+              status={ticketDetails?.status ?? ticket.pipelineStatus}
+            />
           </div>
         </div>
 
@@ -284,37 +440,113 @@ export function BoardSidePanel({
             <section className={styles.subPanel}>
               <div className={styles.subPanelHeader}>
                 <div>
-                  <p className={styles.summaryLabel}>Resume</p>
-                  <h4>Tailored CV</h4>
+                  <p className={styles.summaryLabel}>Preview</p>
+                  <h4>
+                    {activePreviewTab === "summary"
+                      ? "Summary JSON"
+                      : "Tailored CV"}
+                  </h4>
                 </div>
-                <Link
-                  className={styles.linkButton}
-                  href={`/applications/${ticket.ticketId}`}
-                >
-                  <ExternalLink size={16} />
-                  <span>Open workspace</span>
-                </Link>
+                {activePreviewTab === "resume" ? (
+                  <Link
+                    className={styles.linkButton}
+                    href={`/applications/${ticket.ticketId}`}
+                  >
+                    <ExternalLink size={16} />
+                    <span>Open workspace</span>
+                  </Link>
+                ) : null}
               </div>
-              <p className={styles.sectionDescription}>
-                Always visible preview from the ticket workspace.
-              </p>
-              <TailoredResumePreview
-                baseCv={baseCv}
-                emptyMessage="No generated resume is attached to this ticket yet."
-                isLoading={isTicketDetailsLoading}
-                markdown={ticketDetails?.result?.cvMarkdown ?? null}
-                ticketDetailsError={ticketDetailsError}
-              />
+
+              <div className={styles.previewTabs} role="tablist">
+                <button
+                  className={`${styles.previewTabButton} ${
+                    activePreviewTab === "summary"
+                      ? styles.previewTabButtonActive
+                      : ""
+                  }`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activePreviewTab === "summary"}
+                  onClick={() => setActivePreviewTab("summary")}
+                >
+                  Summary JSON
+                </button>
+                <button
+                  className={`${styles.previewTabButton} ${
+                    activePreviewTab === "resume"
+                      ? styles.previewTabButtonActive
+                      : ""
+                  }`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activePreviewTab === "resume"}
+                  onClick={() => setActivePreviewTab("resume")}
+                >
+                  Tailored CV
+                </button>
+              </div>
+
+              {activePreviewTab === "summary" ? (
+                <>
+                  <p className={styles.sectionDescription}>
+                    Summary status is checked automatically every 3 seconds
+                    until the backend callback saves it.
+                  </p>
+                  {enableSummaryTestActions ? (
+                    <div className={styles.summaryActionRow}>
+                      <button
+                        className={styles.secondaryButton}
+                        type="button"
+                        onClick={() => void handleSummaryGeneration()}
+                        disabled={isSummaryGenerationLoading}
+                      >
+                        {isSummaryGenerationLoading
+                          ? "Retrying..."
+                          : "Retry summary generation"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {summaryActionMessage ? (
+                    <p className={styles.inlineStatus}>{summaryActionMessage}</p>
+                  ) : null}
+                  <SummaryPreview
+                    errorMessage={summaryError}
+                    isLoading={isSummaryLoading}
+                    isPolling={isSummaryPolling}
+                    payload={summaryPayload}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className={styles.sectionDescription}>
+                    Resume status is checked automatically every 3 seconds while
+                    generation is still running.
+                  </p>
+                  <TailoredResumePreview
+                    baseCv={baseCv}
+                    emptyMessage="No generated resume is attached to this ticket yet."
+                    isLoading={isTicketDetailsLoading}
+                    isPolling={isResumePolling}
+                    markdown={ticketDetails?.result?.cvMarkdown ?? null}
+                    ticketDetailsError={ticketDetailsError}
+                  />
+                </>
+              )}
             </section>
 
             <div className={styles.stageSectionList}>
               <p className={styles.summaryLabel}>Stages</p>
               {stageRecords.map((stageRecord) => {
-                const isCurrentStage = stageRecord.stage === ticket.currentStage;
+                const isCurrentStage =
+                  stageRecord.stage === ticket.currentStage;
                 const isOpen = openStages.includes(stageRecord.stage);
 
                 return (
-                  <section key={stageRecord.stage} className={styles.stageSection}>
+                  <section
+                    key={stageRecord.stage}
+                    className={styles.stageSection}
+                  >
                     <button
                       className={styles.stageHeader}
                       type="button"
@@ -589,18 +821,6 @@ function StageEditor({
             </label>
           </div>
         </section>
-        <section className={styles.subPanel}>
-          <div className={styles.subPanelHeader}>
-            <h4>Company summary</h4>
-            <p>
-              This placeholder stays visible until we wire the summary source.
-            </p>
-          </div>
-          <p className={styles.placeholderNote}>
-            Company summary is not connected yet. The section is reserved for
-            the next iteration.
-          </p>
-        </section>
       </div>
     );
   }
@@ -813,6 +1033,48 @@ function StageReadOnly({
   );
 }
 
+function SummaryPreview({
+  errorMessage,
+  isLoading,
+  isPolling,
+  payload,
+}: {
+  errorMessage: string | null;
+  isLoading: boolean;
+  isPolling: boolean;
+  payload: GetApplicationSummaryResponse | null;
+}) {
+  if (isLoading) {
+    return <p className={styles.inlineStatus}>Checking summary status...</p>;
+  }
+
+  if (errorMessage) {
+    return <p className={styles.inlineError}>{errorMessage}</p>;
+  }
+
+  if (!payload) {
+    return (
+      <p className={styles.placeholderNote}>
+        {isPolling
+          ? "Summary generation is still running. Checking again in a few seconds."
+          : "Summary is not available yet."}
+      </p>
+    );
+  }
+
+  if (payload.status === "unavailable") {
+    return (
+      <p className={styles.placeholderNote}>
+        {isPolling
+          ? "Summary generation is still running. Checking again in a few seconds."
+          : payload.message}
+      </p>
+    );
+  }
+
+  return <ApplicationSummaryCard summary={payload.summary} />;
+}
+
 function QuestionEditor({
   title,
   includeAnswers,
@@ -912,17 +1174,19 @@ function TailoredResumePreview({
   baseCv,
   emptyMessage,
   isLoading,
+  isPolling,
   markdown,
   ticketDetailsError,
 }: {
   baseCv: string;
   emptyMessage: string;
   isLoading: boolean;
+  isPolling: boolean;
   markdown: string | null;
   ticketDetailsError: string | null;
 }) {
   if (isLoading) {
-    return <p className={styles.inlineStatus}>Loading resume...</p>;
+    return <p className={styles.inlineStatus}>Checking resume status...</p>;
   }
 
   if (ticketDetailsError) {
@@ -930,7 +1194,13 @@ function TailoredResumePreview({
   }
 
   if (!markdown) {
-    return <p className={styles.inlineStatus}>{emptyMessage}</p>;
+    return (
+      <p className={styles.inlineStatus}>
+        {isPolling
+          ? "Resume generation is still running. Checking again in a few seconds."
+          : emptyMessage}
+      </p>
+    );
   }
 
   return (

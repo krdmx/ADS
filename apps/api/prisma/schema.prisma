@@ -42,17 +42,6 @@ enum ApplicationCompensationPeriod {
   hourly
 }
 
-enum BillingSubscriptionStatus {
-  active
-  trialing
-  past_due
-  canceled
-  unpaid
-  incomplete
-  incomplete_expired
-  paused
-}
-
 model AppMetadata {
   key       String   @id
   value     String
@@ -68,19 +57,11 @@ model WhitelistEntry {
 }
 
 model User {
-  id               String          @id @default(cuid())
-  email            String          @unique
-  googleSub        String          @unique
-  name             String?
-  image            String?
-  hasExclusivePlan Boolean         @default(false)
-  stripeCustomerId String?         @unique
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  profile          UserProfile?
+  id        String              @id
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  profile   UserProfile?
   tickets          ApplicationTicket[]
-  subscription     Subscription?
-  usageBuckets     UsageBucket[]
 }
 
 model UserProfile {
@@ -93,43 +74,21 @@ model UserProfile {
   updatedAt  DateTime @updatedAt
 }
 
-model Subscription {
-  id                    String                    @id @default(cuid())
-  userId                String                    @unique
-  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stripeSubscriptionId  String                    @unique
-  stripePriceId         String?
-  status                BillingSubscriptionStatus
-  currentPeriodStart    DateTime?
-  currentPeriodEnd      DateTime?
-  cancelAtPeriodEnd     Boolean                   @default(false)
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-}
-
-model UsageBucket {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  monthStart     DateTime
-  generatedCount Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@unique([userId, monthStart])
-  @@index([monthStart])
-}
-
 model ApplicationTicket {
   id                 String                  @id @default(cuid())
-  userId             String?
-  user               User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId             String
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   status             ApplicationTicketStatus
   companyName        String
+  companyWebsite     String?
+  positionTitle      String?
+  jdUrl              String?
   vacancyDescription String
   lastError          String?
   result             ApplicationTicketResult?
   tracker            ApplicationTracker?
+  companySummary     ApplicationTicketCompanySummary?
+  vacancySummary     ApplicationTicketVacancySummary?
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
 
@@ -144,6 +103,48 @@ model ApplicationTicketResult {
   personalNote        String
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+}
+
+model ApplicationTicketCompanySummary {
+  ticketId                    String            @id
+  ticket                      ApplicationTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  companyName                 String
+  companyType                 String?
+  companySize                 String?
+  companyIndustry             String?
+  companyBusinessModel        String?
+  companyProductType          String?
+  companyFounded              String?
+  companyHq                   String?
+  companyFundingStage         String?
+  cultureValues               String[]
+  cultureWorkStyle            String?
+  cultureEngineeringCulture   String?
+  flagsGreen                  String[]
+  flagsRed                    String[]
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+}
+
+model ApplicationTicketVacancySummary {
+  ticketId                         String            @id
+  ticket                           ApplicationTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  positionTitle                    String
+  positionSeniority                String
+  positionTeamContext              String
+  positionKeyTasks                 String[]
+  positionRequiredStack            String[]
+  positionNiceToHaveStack          String[]
+  positionSalaryMin                Float?
+  positionSalaryMax                Float?
+  positionSalaryCurrency           String?
+  positionInterviewProcess         String[]
+  positionGrowthOpportunities      String?
+  screeningPrepWhyHireMe           String[]
+  screeningPrepSmartQuestionsHr    String[]
+  screeningPrepSmartQuestionsTech  String[]
+  createdAt                        DateTime          @default(now())
+  updatedAt                        DateTime          @updatedAt
 }
 
 model ApplicationTracker {

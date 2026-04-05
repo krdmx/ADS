@@ -5,6 +5,7 @@ import { ApplicationsBoard } from "@/components/applications-board";
 import { SiteHeader } from "@/components/site-header";
 import { getErrorMessage } from "@/lib/api-response";
 import { getAuthenticatedServerApi } from "@/lib/server-api";
+import { getWebFeatures } from "@/lib/web-features";
 import styles from "./page.module.css";
 
 type ApplicationsBoardPageProps = {
@@ -17,6 +18,7 @@ export default async function ApplicationsBoardPage({
   searchParams,
 }: ApplicationsBoardPageProps) {
   await connection();
+  const { appMode } = getWebFeatures();
   const { ticketId } = await searchParams;
   const initialSelectedTicketId = Array.isArray(ticketId)
     ? ticketId[0]?.trim() || null
@@ -50,6 +52,7 @@ export default async function ApplicationsBoardPage({
 
       <section className={styles.boardPanel}>
         <ApplicationsBoard
+          enableSummaryTestActions={appMode === "local"}
           initialPayload={payload ?? undefined}
           initialErrorMessage={errorMessage}
           initialSelectedTicketId={initialSelectedTicketId ?? undefined}

@@ -1,19 +1,6 @@
 const defaultMarketingUrl = "http://land.localhost";
 const defaultAppUrl = "http://localhost";
 
-function normalizeAbsoluteUrl(
-  value: string | undefined,
-  fallbackValue: string
-) {
-  const candidate = (value ?? fallbackValue).trim();
-
-  try {
-    return new URL(candidate).toString().replace(/\/+$/, "");
-  } catch {
-    return fallbackValue;
-  }
-}
-
 function getHostName(value: string) {
   try {
     return new URL(value).hostname.toLowerCase();
@@ -22,15 +9,9 @@ function getHostName(value: string) {
   }
 }
 
-export const marketingUrl = normalizeAbsoluteUrl(
-  process.env.NEXT_PUBLIC_MARKETING_URL,
-  defaultMarketingUrl
-);
+export const marketingUrl = defaultMarketingUrl;
 
-export const appUrl = normalizeAbsoluteUrl(
-  process.env.NEXT_PUBLIC_APP_URL,
-  defaultAppUrl
-);
+export const appUrl = defaultAppUrl;
 
 export function isAppHost(host: string | null | undefined) {
   if (!host) {

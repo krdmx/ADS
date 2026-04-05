@@ -1,33 +1,15 @@
-import { getServerSession } from "next-auth";
-
-import { authOptions } from "@/auth";
 import { buildApiUrl } from "@/lib/api-config";
 import { getErrorMessage } from "@/lib/api-response";
 import { createApiClient } from "@/lib/axios-client";
 import { lookupWithLocalhostFallback } from "@/lib/localhost-lookup";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
-const PUBLIC_PATHNAMES = new Set(["/status", "/whitelist"]);
 const backendProxyApi = createApiClient({
   adapter: "http",
   baseURL: buildApiUrl("/api/v1"),
   lookup: lookupWithLocalhostFallback,
   noStoreGetRequests: true,
 });
-
-function getInternalApiSharedSecret() {
-  const secret = process.env.INTERNAL_API_SHARED_SECRET?.trim();
-
-  if (!secret) {
-    throw new Error("INTERNAL_API_SHARED_SECRET is not configured.");
-  }
-
-  return secret;
-}
-
-function shouldRequireSession(pathname: string) {
-  return !PUBLIC_PATHNAMES.has(pathname);
-}
 
 async function proxyRequest(
   request: Request,
@@ -42,21 +24,6 @@ async function proxyRequest(
     });
   }
 
-  const session = shouldRequireSession(pathname)
-    ? await getServerSession(authOptions)
-    : null;
-
-  if (shouldRequireSession(pathname) && !session?.user?.id) {
-    return Response.json(
-      {
-        message: "Authentication required.",
-      },
-      {
-        status: 401,
-      }
-    );
-  }
-
   const proxiedHeaders = new Headers();
   const contentType = request.headers.get("content-type");
   const accept = request.headers.get("accept");
@@ -67,11 +34,6 @@ async function proxyRequest(
 
   if (accept) {
     proxiedHeaders.set("accept", accept);
-  }
-
-  if (session?.user?.id) {
-    proxiedHeaders.set("x-internal-app-secret", getInternalApiSharedSecret());
-    proxiedHeaders.set("x-user-id", session.user.id);
   }
 
   try {

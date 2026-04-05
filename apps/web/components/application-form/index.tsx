@@ -1,23 +1,15 @@
 "use client";
 
 import type {
-  CreateBillingSessionResponse,
   CreateApplicationRequest,
   CreateApplicationResponse,
-  GetAccountResponse,
-  QuotaExceededErrorResponse,
 } from "@repo/contracts";
 import { ArrowRight, FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-import { AlertPopup } from "@/components/alert-popup";
 import { api, getErrorMessage } from "@/lib/api";
-import { getQuotaExceededError } from "@/lib/api-response";
 import styles from "./application-form.module.css";
-
-const LOCKED_MOCK_VACANCY_DESCRIPTION =
-  "Mock mode is enabled. The saved base CV is returned without vacancy-specific tailoring.";
 
 type SubmissionState =
   | { kind: "idle" }
@@ -25,24 +17,13 @@ type SubmissionState =
   | { kind: "success"; payload: CreateApplicationResponse }
   | { kind: "error"; message: string };
 
-export function ApplicationForm({
-  initialAccount,
-  isMockPipelineEnabled = false,
-}: {
-  initialAccount?: GetAccountResponse;
-  isMockPipelineEnabled?: boolean;
-}) {
+export function ApplicationForm() {
   const [companyName, setCompanyName] = useState("");
-  const [vacancyDescription, setVacancyDescription] = useState(() =>
-    isMockPipelineEnabled ? LOCKED_MOCK_VACANCY_DESCRIPTION : ""
-  );
-  const [account, setAccount] = useState<GetAccountResponse | null>(
-    initialAccount ?? null
-  );
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [positionTitle, setPositionTitle] = useState("");
+  const [jdUrl, setJdUrl] = useState("");
+  const [vacancyDescription, setVacancyDescription] = useState("");
   const [state, setState] = useState<SubmissionState>({ kind: "idle" });
-  const [quotaError, setQuotaError] =
-    useState<QuotaExceededErrorResponse | null>(null);
-  const [isBillingBusy, setIsBillingBusy] = useState(false);
 
   function resetState() {
     setState((current) =>
@@ -50,92 +31,25 @@ export function ApplicationForm({
     );
   }
 
-  function syncAccountQuota(
-    nextQuota: Pick<
-      GetAccountResponse,
-      | "plan"
-      | "subscriptionStatus"
-      | "usedThisMonth"
-      | "monthlyLimit"
-      | "remainingThisMonth"
-      | "currentPeriodStart"
-      | "currentPeriodEnd"
-    >
-  ) {
-    setAccount((current) =>
-      current
-        ? {
-            ...current,
-            ...nextQuota,
-            canCreateApplications:
-              current.plan === "exclusive" ||
-              nextQuota.plan === "exclusive" ||
-              current.quotaBypassed ||
-              nextQuota.remainingThisMonth > 0,
-          }
-        : current
-    );
-  }
-
-  async function startBillingFlow(
-    pathname:
-      | "/api/v1/billing/checkout-session"
-      | "/api/v1/billing/portal-session"
-  ) {
-    setIsBillingBusy(true);
-
-    try {
-      const { data } = await api.post<CreateBillingSessionResponse>(pathname);
-      window.location.assign(data.url);
-    } catch (error) {
-      setState({ kind: "error", message: getErrorMessage(error) });
-      setIsBillingBusy(false);
-    }
-  }
-
-  function openQuotaPopup(nextQuotaError: QuotaExceededErrorResponse) {
-    setQuotaError(nextQuotaError);
-    syncAccountQuota(nextQuotaError);
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const nextCompanyName = String(formData.get("companyName") ?? "").trim();
-    const nextVacancyDescription = isMockPipelineEnabled
-      ? LOCKED_MOCK_VACANCY_DESCRIPTION
-      : String(formData.get("vacancyDescription") ?? "").trim();
 
-    setCompanyName(nextCompanyName);
-    setVacancyDescription(nextVacancyDescription);
-
-    if (!nextCompanyName || !nextVacancyDescription) {
-      setState({
-        kind: "error",
-        message: "Company name and role brief are required.",
-      });
-      return;
-    }
+    const nextCompanyName = companyName.trim();
+    const nextCompanyWebsite = companyWebsite.trim();
+    const nextPositionTitle = positionTitle.trim();
+    const nextJdUrl = jdUrl.trim();
+    const nextVacancyDescription = vacancyDescription.trim();
 
     if (
-      account &&
-      account.plan !== "exclusive" &&
-      !account.quotaBypassed &&
-      account.remainingThisMonth <= 0
+      !nextCompanyName ||
+      !nextPositionTitle ||
+      !nextJdUrl ||
+      !nextVacancyDescription
     ) {
-      openQuotaPopup({
-        code: "quota_exceeded",
+      setState({
+        kind: "error",
         message:
-          account.plan === "free"
-            ? "Your free monthly generation limit has been reached."
-            : "Your monthly generation limit has been reached.",
-        plan: account.plan,
-        subscriptionStatus: account.subscriptionStatus,
-        usedThisMonth: account.usedThisMonth,
-        monthlyLimit: account.monthlyLimit,
-        remainingThisMonth: account.remainingThisMonth,
-        currentPeriodStart: account.currentPeriodStart,
-        currentPeriodEnd: account.currentPeriodEnd,
+          "Company name, position title, JD URL, and role brief are required.",
       });
       return;
     }
@@ -143,79 +57,25 @@ export function ApplicationForm({
     setState({ kind: "submitting" });
 
     try {
+      const requestBody: CreateApplicationRequest = {
+        companyName: nextCompanyName,
+        positionTitle: nextPositionTitle,
+        jdUrl: nextJdUrl,
+        vacancyDescription: nextVacancyDescription,
+        ...(nextCompanyWebsite
+          ? { companyWebsite: nextCompanyWebsite }
+          : {}),
+      };
       const { data: payload } = await api.post<CreateApplicationResponse>(
         "/api/v1/applications",
-        {
-          companyName: nextCompanyName,
-          vacancyDescription: nextVacancyDescription,
-        } satisfies CreateApplicationRequest
+        requestBody
       );
 
       setState({ kind: "success", payload });
-      setAccount((current) =>
-        current
-          ? current.plan === "exclusive" || current.quotaBypassed
-            ? current
-            : {
-                ...current,
-                usedThisMonth: current.usedThisMonth + 1,
-                remainingThisMonth: Math.max(0, current.remainingThisMonth - 1),
-                canCreateApplications: current.remainingThisMonth - 1 > 0,
-              }
-          : current
-      );
     } catch (error) {
-      const nextQuotaError = getQuotaExceededError(error);
-
-      if (nextQuotaError) {
-        openQuotaPopup(nextQuotaError);
-        setState({ kind: "idle" });
-        return;
-      }
-
       setState({ kind: "error", message: getErrorMessage(error) });
     }
   }
-
-  const isExclusivePlan = account?.plan === "exclusive";
-  const hasLocalQuotaBypass = Boolean(account?.quotaBypassed);
-  const quotaSummary = account
-    ? isExclusivePlan
-      ? "Unlimited access"
-      : hasLocalQuotaBypass
-        ? "Unlimited locally"
-        : `${account.usedThisMonth}/${account.monthlyLimit} used this month`
-    : null;
-  const quotaLabel = account
-    ? isExclusivePlan
-      ? "Exclusive plan"
-      : hasLocalQuotaBypass
-        ? "Local development quota"
-        : account.plan === "paid"
-          ? "Paid monthly limit"
-          : "Free monthly limit"
-    : null;
-  const quotaResetLabel = quotaError
-    ? new Date(quotaError.currentPeriodEnd).toLocaleDateString()
-    : account
-      ? new Date(account.currentPeriodEnd).toLocaleDateString()
-      : null;
-  const quotaHint = account
-    ? isExclusivePlan
-      ? "Your account has unlimited CV generation and full feature access."
-      : hasLocalQuotaBypass
-        ? "This Google account bypasses monthly generation caps while the app runs outside production."
-        : account.remainingThisMonth > 0
-          ? `${account.remainingThisMonth} generations remaining before ${new Date(
-              account.currentPeriodEnd
-            ).toLocaleDateString()}.`
-          : `No generations remaining until ${new Date(
-              account.currentPeriodEnd
-            ).toLocaleDateString()}.`
-    : null;
-  const surfacedPlan = quotaError?.plan ?? account?.plan;
-  const isPaidPlan = surfacedPlan === "paid";
-  const canManageSubscription = isPaidPlan && account?.hasCustomerPortal;
 
   return (
     <div className={styles.formStack}>
@@ -224,21 +84,12 @@ export function ApplicationForm({
         <h1 className={styles.title}>
           Turn each request into an editable markdown workspace.
         </h1>
-        {account ? (
-          <div className={styles.quotaPanel}>
-            <div>
-              <p className={styles.quotaLabel}>{quotaLabel}</p>
-              <strong className={styles.quotaValue}>{quotaSummary}</strong>
-            </div>
-            <p className={styles.quotaHint}>{quotaHint}</p>
-          </div>
-        ) : null}
       </div>
 
       <form className={styles.composerForm} onSubmit={handleSubmit}>
         <div className={styles.fieldGroup}>
           <label className={styles.fieldLabel} htmlFor="companyName">
-            Company name
+            Company name *
           </label>
           <input
             className={styles.textInput}
@@ -257,24 +108,82 @@ export function ApplicationForm({
         </div>
 
         <div className={styles.fieldGroup}>
+          <label className={styles.fieldLabel} htmlFor="companyWebsite">
+            Company website
+          </label>
+          <input
+            className={styles.textInput}
+            id="companyWebsite"
+            name="companyWebsite"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://company.com"
+            value={companyWebsite}
+            onChange={(event) => {
+              resetState();
+              setCompanyWebsite(event.target.value);
+            }}
+            disabled={state.kind === "submitting"}
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.fieldLabel} htmlFor="positionTitle">
+            Position title *
+          </label>
+          <input
+            className={styles.textInput}
+            id="positionTitle"
+            name="positionTitle"
+            type="text"
+            placeholder="Senior Frontend Engineer"
+            value={positionTitle}
+            onChange={(event) => {
+              resetState();
+              setPositionTitle(event.target.value);
+            }}
+            disabled={state.kind === "submitting"}
+            required
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.fieldLabel} htmlFor="jdUrl">
+            JD URL *
+          </label>
+          <input
+            className={styles.textInput}
+            id="jdUrl"
+            name="jdUrl"
+            type="url"
+            inputMode="url"
+            placeholder="https://company.com/careers/frontend-engineer"
+            value={jdUrl}
+            onChange={(event) => {
+              resetState();
+              setJdUrl(event.target.value);
+            }}
+            disabled={state.kind === "submitting"}
+            required
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
           <label className={styles.fieldLabel} htmlFor="vacancyDescription">
-            Role brief
+            Role brief *
           </label>
           <textarea
             className={styles.textArea}
             id="vacancyDescription"
             name="vacancyDescription"
-            placeholder={
-              isMockPipelineEnabled
-                ? "Mock mode locks the role brief."
-                : "Paste the job description or hiring brief here."
-            }
+            placeholder="Paste the job description or hiring brief here."
             value={vacancyDescription}
             onChange={(event) => {
               resetState();
               setVacancyDescription(event.target.value);
             }}
-            disabled={isMockPipelineEnabled || state.kind === "submitting"}
+            disabled={state.kind === "submitting"}
             required
           />
         </div>
@@ -311,6 +220,9 @@ export function ApplicationForm({
             <p className={styles.feedbackText}>
               Created at: {new Date(state.payload.createdAt).toLocaleString()}
             </p>
+            <p className={styles.feedbackText}>
+              CV and company/vacancy summary are now generating in parallel.
+            </p>
             <div className={styles.feedbackLinks}>
               <Link
                 className={`${styles.textLink} ${styles.textLinkInline}`}
@@ -341,57 +253,6 @@ export function ApplicationForm({
           </div>
         </div>
       ) : null}
-
-      <AlertPopup
-        open={quotaError !== null}
-        eyebrow={isPaidPlan ? "Monthly limit reached" : "Free limit reached"}
-        title={
-          isPaidPlan
-            ? "This plan has reached its monthly generation cap."
-            : "Your free monthly generation limit has been reached."
-        }
-        description={
-          quotaError
-            ? isPaidPlan
-              ? `You have already used ${quotaError.usedThisMonth} of ${quotaError.monthlyLimit} generations this month. The counter resets on ${quotaResetLabel}.`
-              : `You have already used ${quotaError.usedThisMonth} of ${quotaError.monthlyLimit} free generations this month. The counter resets on ${quotaResetLabel}. Upgrade to keep creating new tickets right away.`
-            : ""
-        }
-        confirmLabel={
-          isPaidPlan
-            ? canManageSubscription
-              ? "Manage subscription"
-              : "Okay"
-            : "Upgrade now"
-        }
-        cancelLabel="Maybe later"
-        isBusy={isBillingBusy}
-        tone="default"
-        onCancel={() => {
-          if (isBillingBusy) {
-            return;
-          }
-
-          setQuotaError(null);
-        }}
-        onConfirm={async () => {
-          if (!quotaError) {
-            return;
-          }
-
-          if (isPaidPlan) {
-            if (!canManageSubscription) {
-              setQuotaError(null);
-              return;
-            }
-
-            await startBillingFlow("/api/v1/billing/portal-session");
-            return;
-          }
-
-          await startBillingFlow("/api/v1/billing/checkout-session");
-        }}
-      />
     </div>
   );
 }

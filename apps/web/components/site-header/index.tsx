@@ -1,9 +1,6 @@
-import type { GetAccountResponse } from "@repo/contracts";
 import Link from "next/link";
 
 import { AppLogo } from "@/assets";
-import { getAuthenticatedServerApi } from "@/lib/server-api";
-import { SiteHeaderActions } from "./site-header-actions";
 import { SiteHeaderNav, type SiteNavigationItem } from "./site-header-nav";
 import styles from "./site-header.module.css";
 
@@ -35,31 +32,7 @@ const navigationItems: SiteNavigationItem[] = [
   },
 ];
 
-function formatUsageSummary(account: GetAccountResponse) {
-  if (account.plan === "exclusive") {
-    return "Unlimited access";
-  }
-
-  if (account.quotaBypassed) {
-    return "Unlimited locally";
-  }
-
-  return `${account.usedThisMonth}/${account.monthlyLimit} this month`;
-}
-
-function formatPlanLabel(account: GetAccountResponse) {
-  if (account.plan === "exclusive") {
-    return "Exclusive plan";
-  }
-
-  return account.plan === "paid" ? "Paid monthly" : "Free plan";
-}
-
-export async function SiteHeader() {
-  const api = await getAuthenticatedServerApi();
-  const response = await api.get<GetAccountResponse>("/api/v1/account");
-  const account = response.data;
-
+export function SiteHeader() {
   return (
     <header className={styles.headerShell}>
       <Link className={styles.brandMark} href="/">
@@ -74,16 +47,8 @@ export async function SiteHeader() {
       <SiteHeaderNav navigationItems={navigationItems} />
 
       <div className={styles.headerMeta}>
-        <span
-          className={`${styles.metaChip} ${formatPlanLabel(account).includes("Exclusive") && styles.exclusive}`}
-        >
-          {formatPlanLabel(account)}
-        </span>
-        <span className={styles.metaChip}>{formatUsageSummary(account)}</span>
-        <SiteHeaderActions
-          plan={account.plan}
-          hasCustomerPortal={account.hasCustomerPortal}
-        />
+        <span className={styles.metaChip}>Local workspace</span>
+        <span className={styles.metaChip}>No sign-in required</span>
       </div>
     </header>
   );

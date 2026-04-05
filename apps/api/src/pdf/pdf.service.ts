@@ -57,9 +57,7 @@ function normalizeGotenbergUrl(value: string | undefined) {
 
 @Injectable()
 export class PdfService {
-  private readonly gotenbergUrl = normalizeGotenbergUrl(
-    process.env.GOTENBERG_URL
-  );
+  private readonly gotenbergUrl = normalizeGotenbergUrl("http://gotenberg:3000");
 
   async renderApplicationPdf(input: RenderApplicationPdfInput) {
     return this.renderPdfDocument(input);

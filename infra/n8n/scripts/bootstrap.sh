@@ -7,6 +7,7 @@ CREDS_MARKER_FILE="$N8N_DATA_DIR/.project-credentials-imported.sha256"
 WORKFLOW_FILE="/seed/workflow.json"
 RENDERED_WORKFLOW_FILE="/tmp/n8n-rendered-workflow.json"
 CREDENTIALS_FILE="/tmp/n8n-generated-credentials.json"
+LOCAL_CALLBACK_SECRET="change-me-backend-secret"
 
 mkdir -p "$N8N_DATA_DIR"
 
@@ -36,18 +37,19 @@ import_if_changed() {
 render_workflow_file() {
   WORKFLOW_FILE_PATH="$WORKFLOW_FILE" \
   RENDERED_WORKFLOW_FILE_PATH="$RENDERED_WORKFLOW_FILE" \
+  LOCAL_CALLBACK_SECRET_VALUE="$LOCAL_CALLBACK_SECRET" \
   node <<'EOF_NODE'
 const fs = require('fs');
 
 const sourcePath = process.env.WORKFLOW_FILE_PATH;
 const targetPath = process.env.RENDERED_WORKFLOW_FILE_PATH;
-const appSecret = process.env.BACKEND_APP_SECRET || '';
+const localCallbackSecret = process.env.LOCAL_CALLBACK_SECRET_VALUE;
 
 const workflow = fs.readFileSync(sourcePath, 'utf8');
 
 fs.writeFileSync(
   targetPath,
-  workflow.replace(/__BACKEND_APP_SECRET__/g, appSecret),
+  workflow.replace(/__BACKEND_APP_SECRET__/g, localCallbackSecret),
 );
 EOF_NODE
 }
@@ -58,57 +60,34 @@ const fs = require('fs');
 
 const credentials = [];
 
-const docsCredentialId = 'e5xrtTyMCfd8MH3G';
-const docsCredentialName =
-  process.env.N8N_GOOGLE_DOCS_CREDENTIAL_NAME || 'Google Docs account';
-
-const geminiCredentialId = 'Mj9DKEcV4Is3LYzI';
-const geminiCredentialName =
-  process.env.N8N_GOOGLE_GEMINI_CREDENTIAL_NAME ||
-  'Google Gemini(PaLM) Api account';
-
-const docsEmail = process.env.N8N_GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
-const docsPrivateKey = (process.env.N8N_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '')
-  .replace(/\\n/g, '\n')
-  .trim();
-
-if (docsEmail && docsPrivateKey) {
-  const impersonate =
-    (process.env.N8N_GOOGLE_SERVICE_ACCOUNT_IMPERSONATE || 'false').toLowerCase() === 'true';
-  const delegatedEmail = process.env.N8N_GOOGLE_SERVICE_ACCOUNT_DELEGATED_EMAIL || '';
-
-  credentials.push({
-    id: docsCredentialId,
-    name: docsCredentialName,
-    type: 'googleApi',
-    data: {
-      region: 'us-central1',
-      email: docsEmail,
-      privateKey: docsPrivateKey,
-      inpersonate: impersonate,
-      delegatedEmail,
-      httpNode: false,
-      scopes: '',
-    },
-  });
-}
-
 if (process.env.GOOGLE_GEMINI_API_KEY) {
   credentials.push({
-    id: geminiCredentialId,
-    name: geminiCredentialName,
+    id: 'Mj9DKEcV4Is3LYzI',
+    name: 'Google Gemini(PaLM) Api account',
     type: 'googlePalmApi',
     data: {
-      host:
-        process.env.N8N_GOOGLE_GEMINI_API_HOST ||
-        'https://generativelanguage.googleapis.com',
+      host: 'https://generativelanguage.googleapis.com',
       apiKey: process.env.GOOGLE_GEMINI_API_KEY,
     },
   });
 }
 
+if (process.env.TAVILY_API_KEY) {
+  credentials.push({
+    id: 'JXz9tUX9GQioJBtH',
+    name: 'Tavily account',
+    type: 'tavilyApi',
+    data: {
+      apiKey: process.env.TAVILY_API_KEY,
+    },
+  });
+}
+
 if (credentials.length > 0) {
-  fs.writeFileSync('/tmp/n8n-generated-credentials.json', JSON.stringify(credentials, null, 2));
+  fs.writeFileSync(
+    '/tmp/n8n-generated-credentials.json',
+    JSON.stringify(credentials, null, 2)
+  );
 }
 EOF_NODE
 
@@ -129,8 +108,15 @@ if [ "${N8N_IMPORT_SEED:-true}" = "true" ] && [ -f "$WORKFLOW_FILE" ]; then
     "n8n import:workflow --input=\"$RENDERED_WORKFLOW_FILE\""
 
   seed_workflow_id="$(
-    sed -n 's/^[[:space:]]*"id":[[:space:]]*"\([^"]*\)".*/\1/p' "$RENDERED_WORKFLOW_FILE" \
-      | head -n 1
+    RENDERED_WORKFLOW_FILE_PATH="$RENDERED_WORKFLOW_FILE" node <<'EOF_NODE'
+const fs = require('fs');
+
+const workflow = JSON.parse(
+  fs.readFileSync(process.env.RENDERED_WORKFLOW_FILE_PATH, 'utf8')
+);
+
+process.stdout.write(typeof workflow.id === 'string' ? workflow.id : '');
+EOF_NODE
   )"
 
   if [ -n "$seed_workflow_id" ]; then
