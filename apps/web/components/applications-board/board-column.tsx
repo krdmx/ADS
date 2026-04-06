@@ -8,7 +8,6 @@ import { useDroppable } from "@dnd-kit/core";
 
 import {
   doesTicketMatchSearch,
-  getBoardStageDescription,
   getBoardStageLabel,
   sortBoardTickets,
   type BoardColumnSortMode,
@@ -41,15 +40,13 @@ export function BoardColumn({
   return (
     <section
       ref={setNodeRef}
+      data-board-stage={stage}
       className={`${styles.columnShell} ${isOver ? styles.columnShellActive : ""}`}
     >
       <header className={styles.columnHeader}>
         <div>
           <p className={styles.columnEyebrow}>{tickets.length} card(s)</p>
           <h2 className={styles.columnTitle}>{getBoardStageLabel(stage)}</h2>
-          <p className={styles.columnDescription}>
-            {getBoardStageDescription(stage)}
-          </p>
         </div>
       </header>
 

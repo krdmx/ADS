@@ -2,14 +2,16 @@
 
 import type { ApplicationBoardStage } from "@repo/contracts";
 import { APPLICATION_BOARD_STAGE_ORDER } from "@repo/contracts";
-import { ChevronDown, RefreshCcw, Search, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronDown,
+  RefreshCcw,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import {
-  getBoardStageDescription,
-  getBoardStageLabel,
-} from "@/lib/application-board";
+import { getBoardStageLabel } from "@/lib/application-board";
 import styles from "./applications-board.module.css";
 
 type BoardToolbarProps = {
@@ -53,7 +55,8 @@ export function BoardToolbar({
     }
 
     function updateColumnManagerPosition() {
-      const triggerRect = columnManagerButtonRef.current?.getBoundingClientRect();
+      const triggerRect =
+        columnManagerButtonRef.current?.getBoundingClientRect();
 
       if (!triggerRect) {
         return;
@@ -107,51 +110,49 @@ export function BoardToolbar({
   }, [isColumnManagerOpen]);
 
   const columnManagerMenu =
-    isColumnManagerOpen && portalRoot && columnManagerMenuStyle ? (
-      createPortal(
-        <div
-          ref={columnManagerMenuRef}
-          className={styles.columnManagerMenuPortal}
-          style={{
-            top: `${columnManagerMenuStyle.top}px`,
-            left: `${columnManagerMenuStyle.left}px`,
-            width: `${columnManagerMenuStyle.width}px`,
-          }}
-        >
+    isColumnManagerOpen && portalRoot && columnManagerMenuStyle
+      ? createPortal(
           <div
-            className={styles.columnManagerMenu}
-            id="board-columns-menu"
-            role="listbox"
-            aria-multiselectable="true"
+            ref={columnManagerMenuRef}
+            className={styles.columnManagerMenuPortal}
+            style={{
+              top: `${columnManagerMenuStyle.top}px`,
+              left: `${columnManagerMenuStyle.left}px`,
+              width: `${columnManagerMenuStyle.width}px`,
+            }}
           >
-            <div className={styles.columnOptionList}>
-              {APPLICATION_BOARD_STAGE_ORDER.map((stage) => {
-                const isVisible = !hiddenColumns.includes(stage);
+            <div
+              className={styles.columnManagerMenu}
+              id="board-columns-menu"
+              role="listbox"
+              aria-multiselectable="true"
+            >
+              <div className={styles.columnOptionList}>
+                {APPLICATION_BOARD_STAGE_ORDER.map((stage) => {
+                  const isVisible = !hiddenColumns.includes(stage);
 
-                return (
-                  <label key={stage} className={styles.columnOption}>
-                    <input
-                      type="checkbox"
-                      checked={isVisible}
-                      onChange={() => onToggleColumn(stage)}
-                    />
-                    <span>
-                      <span className={styles.columnOptionLabel}>
-                        {getBoardStageLabel(stage)}
+                  return (
+                    <label key={stage} className={styles.columnOption}>
+                      <input
+                        type="checkbox"
+                        checked={isVisible}
+                        onChange={() => onToggleColumn(stage)}
+                      />
+                      <span>
+                        <span className={styles.columnOptionLabel}>
+                          {getBoardStageLabel(stage)}
+                        </span>
                       </span>
-                      <span className={styles.columnOptionHint}>
-                        {getBoardStageDescription(stage)}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </div>,
-        portalRoot
-      )
-    ) : null;
+          </div>,
+          portalRoot
+        )
+      : null;
+  const columnManagerValue = `${visibleColumnCount} of ${APPLICATION_BOARD_STAGE_ORDER.length} visible`;
 
   return (
     <>
@@ -195,9 +196,7 @@ export function BoardToolbar({
               <span className={styles.panelEyebrow} id="board-columns">
                 Column Controls
               </span>
-              <span className={styles.columnManagerValue}>
-                {visibleColumnCount} of {APPLICATION_BOARD_STAGE_ORDER.length} visible
-              </span>
+              <span className={styles.columnManagerValue}>{columnManagerValue}</span>
             </span>
             <span className={styles.columnManagerButtonMeta}>
               <SlidersHorizontal size={16} />

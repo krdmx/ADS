@@ -489,10 +489,6 @@ export function BoardSidePanel({
 
               {activePreviewTab === "summary" ? (
                 <>
-                  <p className={styles.sectionDescription}>
-                    Summary status is checked automatically every 3 seconds
-                    until the backend callback saves it.
-                  </p>
                   {enableSummaryTestActions ? (
                     <div className={styles.summaryActionRow}>
                       <button
@@ -508,7 +504,9 @@ export function BoardSidePanel({
                     </div>
                   ) : null}
                   {summaryActionMessage ? (
-                    <p className={styles.inlineStatus}>{summaryActionMessage}</p>
+                    <p className={styles.inlineStatus}>
+                      {summaryActionMessage}
+                    </p>
                   ) : null}
                   <SummaryPreview
                     errorMessage={summaryError}

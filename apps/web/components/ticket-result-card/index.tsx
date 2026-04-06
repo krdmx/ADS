@@ -682,23 +682,7 @@ export function TicketResultCard({
               <dt>Updated</dt>
               <dd>{new Date(payload.updatedAt).toLocaleString()}</dd>
             </div>
-            <div>
-              <dt>Last error</dt>
-              <dd>{payload.lastError ?? "none"}</dd>
-            </div>
           </dl>
-
-          <div className={styles.ticketBlock}>
-            <p className={styles.statusLabel}>Company</p>
-            <p className={styles.ticketBlockBody}>{payload.companyName}</p>
-          </div>
-
-          <div className={styles.ticketBlock}>
-            <p className={styles.statusLabel}>Role brief</p>
-            <p className={styles.ticketBlockBody}>
-              {payload.vacancyDescription}
-            </p>
-          </div>
 
           {payload.result ? (
             <div className={styles.ticketBlock}>
@@ -715,16 +699,12 @@ export function TicketResultCard({
         <div className={styles.panelContent}>
           <div className={styles.cardHeadingRow}>
             <div>
-              <p className={styles.eyebrow}>Summary</p>
-              <h2 className={styles.summaryTitle}>Company and vacancy summary</h2>
+              <h2 className={styles.summaryTitle}>
+                Company and vacancy summary
+              </h2>
             </div>
             <p className={styles.statusLabel}>{summaryStatusLabel}</p>
           </div>
-
-          <p className={styles.bodyText}>
-            Summary status is checked automatically every 3 seconds until the
-            backend callback saves it.
-          </p>
 
           <SummaryPreview
             errorMessage={summaryError}
@@ -736,11 +716,6 @@ export function TicketResultCard({
       </section>
 
       <section className={styles.sectionActions}>
-        <p className={styles.note}>
-          This workspace auto-checks resume and summary generation every 3
-          seconds while processing is still running. You can still jump to the
-          board, refresh manually, or remove the ticket from here.
-        </p>
         <div className={styles.actionRow}>
           <Link className={styles.secondaryButton} href={boardHref}>
             <span>Open on Board</span>
@@ -856,11 +831,6 @@ export function TicketResultCard({
 
                 <div className={styles.editorMeta}>
                   <span>{wordCount} words</span>
-                  <span>
-                    {documentVariant === "resume"
-                      ? "Resume preview"
-                      : "Letterhead preview"}
-                  </span>
                 </div>
 
                 <textarea
@@ -911,7 +881,7 @@ export function TicketResultCard({
                 <div className={styles.cardHeadingRow}>
                   <div>
                     <p className={styles.eyebrow}>Preview</p>
-                    <h2 className={styles.title}>PDF-like document view</h2>
+                    <h2 className={styles.title}>PDF document view</h2>
                   </div>
                   <span className={styles.previewChip}>
                     {documentMeta[activeDocument].label}

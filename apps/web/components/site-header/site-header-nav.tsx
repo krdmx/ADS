@@ -62,23 +62,25 @@ export function SiteHeaderNav({
 
   return (
     <nav className={styles.siteNav} aria-label="Primary navigation">
-      {navigationItems.map((item) => {
-        const Icon = navigationIcons[item.icon];
-        const isActive = isNavigationItemActive(item, pathname);
+      {navigationItems
+        .filter((item) => item.label !== "Status")
+        .map((item) => {
+          const Icon = navigationIcons[item.icon];
+          const isActive = isNavigationItemActive(item, pathname);
 
-        return (
-          <Link
-            key={item.href}
-            className={`${styles.navLink} ${
-              isActive ? styles.navLinkActive : ""
-            }`}
-            href={item.href}
-          >
-            <Icon size={16} strokeWidth={2} />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+          return (
+            <Link
+              key={item.href}
+              className={`${styles.navLink} ${
+                isActive ? styles.navLinkActive : ""
+              }`}
+              href={item.href}
+            >
+              <Icon size={16} strokeWidth={2} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
     </nav>
   );
 }

@@ -45,11 +45,6 @@ export function SiteHeader() {
       </Link>
 
       <SiteHeaderNav navigationItems={navigationItems} />
-
-      <div className={styles.headerMeta}>
-        <span className={styles.metaChip}>Local workspace</span>
-        <span className={styles.metaChip}>No sign-in required</span>
-      </div>
     </header>
   );
 }

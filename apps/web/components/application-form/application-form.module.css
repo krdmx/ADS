@@ -39,7 +39,7 @@
 
 .composerForm {
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
   margin-top: 1.6rem;
   padding: 1.25rem;
   border: 1px solid var(--line);

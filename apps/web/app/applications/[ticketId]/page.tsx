@@ -56,14 +56,7 @@ export default async function ApplicationTicketPage({
 
       <section className={styles.introPanel}>
         <div className={styles.introCopy}>
-          <p className={styles.eyebrow}>Ticket Workspace</p>
-          <h1 className={styles.title}>
-            Edit markdown, review the preview, and export PDF.
-          </h1>
-          <p className={styles.lede}>
-            This workspace is driven by the backend ticket result for:
-            <code>{ticketId}</code>.
-          </p>
+          <h1 className={styles.title}>Ticket Workspace</h1>
         </div>
       </section>
 

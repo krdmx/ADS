@@ -16,8 +16,9 @@ export default async function HomePage() {
 
   try {
     const api = await getAuthenticatedServerApi();
-    const applicationsResponse =
-      await api.get<GetApplicationsResponse>("/api/v1/applications");
+    const applicationsResponse = await api.get<GetApplicationsResponse>(
+      "/api/v1/applications"
+    );
 
     applicationsPayload = applicationsResponse.data;
   } catch (error) {

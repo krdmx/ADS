@@ -1,14 +1,16 @@
 "use client";
 
 import type { GetApplicationsResponse } from "@repo/contracts";
-import { RefreshCcw, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { RefreshCcw, Search, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { AlertPopup } from "@/components/alert-popup";
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
+import { useDebounce } from "@/hooks/use-debounce";
 import { api, getErrorMessage } from "@/lib/api";
+import { sortItemsByCompanySearch } from "@/lib/application-search";
 import styles from "./applications-list.module.css";
-import { useRouter } from "next/navigation";
 
 function truncateText(value: string, maxLength: number) {
   if (value.length <= maxLength) {
@@ -35,6 +37,7 @@ export function ApplicationsList({
   );
   const [isLoading, setIsLoading] = useState(!hasServerSeed);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [deletingTicketIds, setDeletingTicketIds] = useState<string[]>([]);
   const [pendingDeleteTicketIds, setPendingDeleteTicketIds] = useState<
@@ -43,6 +46,10 @@ export function ApplicationsList({
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const router = useRouter();
+  const debouncedSearchQuery = useDebounce(
+    searchQuery.trim().toLowerCase(),
+    10
+  );
 
   useEffect(() => {
     let active = true;
@@ -103,9 +110,13 @@ export function ApplicationsList({
   }
 
   const applications = payload?.applications ?? [];
+  const sortedApplications = sortItemsByCompanySearch(
+    applications,
+    debouncedSearchQuery
+  );
   const deletingTicketSet = new Set(deletingTicketIds);
   const selectedTicketSet = new Set(selectedTicketIds);
-  const selectableTicketIds = applications
+  const selectableTicketIds = sortedApplications
     .filter((ticket) => !deletingTicketSet.has(ticket.ticketId))
     .map((ticket) => ticket.ticketId);
   const selectedSelectableCount = selectableTicketIds.filter((ticketId) =>
@@ -299,6 +310,17 @@ export function ApplicationsList({
   return (
     <div className={styles.listStack}>
       <div className={styles.toolbar}>
+        <label className={styles.searchField} htmlFor="applications-search">
+          <Search size={16} />
+          <input
+            id="applications-search"
+            type="search"
+            placeholder="Search by company name"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </label>
+
         <div className={styles.bulkActions}>
           <span className={styles.selectionCount} aria-live="polite">
             {selectedTicketIds.length === 0
@@ -370,19 +392,18 @@ export function ApplicationsList({
                 <th>Status</th>
                 <th>Role brief</th>
                 <th>Updated</th>
-                <th>Last error</th>
                 <th className={styles.actionsHead}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {payload.applications.map((ticket) => {
+              {sortedApplications.map((ticket, index) => {
                 const isDeleting = deletingTicketSet.has(ticket.ticketId);
                 const isSelected = selectedTicketSet.has(ticket.ticketId);
 
                 return (
                   <tr
                     key={ticket.ticketId}
-                    className={isDeleting ? styles.deletingRow : undefined}
+                    className={`${isDeleting ? styles.deletingRow : undefined} ${index !== 0 && searchQuery !== "" ? styles.transparentRow : undefined}`}
                   >
                     <td className={styles.checkboxCell}>
                       <input
@@ -422,13 +443,6 @@ export function ApplicationsList({
                     </td>
                     <td className={styles.dateCell}>
                       {new Date(ticket.updatedAt).toLocaleString()}
-                    </td>
-                    <td
-                      className={`${styles.errorCell} ${
-                        ticket.lastError ? styles.errorCellActive : ""
-                      }`}
-                    >
-                      {ticket.lastError ?? "none"}
                     </td>
                     <td>
                       <button

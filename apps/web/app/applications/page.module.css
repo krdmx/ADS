@@ -30,19 +30,6 @@
   border-radius: var(--radius-lg);
 }
 
-.introPanel::before,
-.listPanel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    var(--panel-highlight),
-    rgba(255, 255, 255, 0)
-  );
-  pointer-events: none;
-}
-
 .introCopy {
   position: relative;
   z-index: 1;

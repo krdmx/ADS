@@ -46,10 +46,7 @@ export default async function ProfilePage() {
 
       <section className={styles.introPanel}>
         <div className={styles.introCopy}>
-          <p className={styles.eyebrow}>Profile Editor</p>
-          <h1 className={styles.title}>
-            Manage the source context used to generate each ticket.
-          </h1>
+          <h1 className={styles.title}>Profile Editor</h1>
         </div>
       </section>
 

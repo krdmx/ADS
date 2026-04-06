@@ -43,10 +43,7 @@ export default async function ApplicationsBoardPage({
 
       <section className={styles.introPanel}>
         <div className={styles.introCopy}>
-          <p className={styles.eyebrow}>Application Board</p>
-          <h1 className={styles.title}>
-            Track every hiring stage on one drag-and-drop board.
-          </h1>
+          <h1 className={styles.title}>Application Board</h1>
         </div>
       </section>
 

@@ -62,9 +62,7 @@ export function ApplicationForm() {
         positionTitle: nextPositionTitle,
         jdUrl: nextJdUrl,
         vacancyDescription: nextVacancyDescription,
-        ...(nextCompanyWebsite
-          ? { companyWebsite: nextCompanyWebsite }
-          : {}),
+        ...(nextCompanyWebsite ? { companyWebsite: nextCompanyWebsite } : {}),
       };
       const { data: payload } = await api.post<CreateApplicationResponse>(
         "/api/v1/applications",
@@ -80,10 +78,7 @@ export function ApplicationForm() {
   return (
     <div className={styles.formStack}>
       <div className={styles.heroCopy}>
-        <p className={styles.eyebrow}>Ticket Composer</p>
-        <h1 className={styles.title}>
-          Turn each request into an editable markdown workspace.
-        </h1>
+        <h1 className={styles.title}>Ticket Composer</h1>
       </div>
 
       <form className={styles.composerForm} onSubmit={handleSubmit}>

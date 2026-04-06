@@ -20,14 +20,16 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   startTransition,
-  useDeferredValue,
   useEffect,
   useOptimistic,
+  useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useDebounce } from "@/hooks/use-debounce";
 import { api, getErrorMessage } from "@/lib/api";
+import { doesTicketMatchSearch } from "@/lib/application-board";
 import { BoardCardOverlay } from "./board-card";
 import { BoardColumn } from "./board-column";
 import { BoardSidePanel } from "./board-side-panel";
@@ -71,9 +73,9 @@ export function ApplicationsBoard({
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(
     initialSelectedTicketId ?? null
   );
-  const [transitioningTicketIds, setTransitioningTicketIds] = useState<string[]>(
-    []
-  );
+  const [transitioningTicketIds, setTransitioningTicketIds] = useState<
+    string[]
+  >([]);
   const [hiddenColumns, setHiddenColumns] = useState<ApplicationBoardStage[]>(
     []
   );
@@ -81,10 +83,12 @@ export function ApplicationsBoard({
   const [sortModes] = useState(createSortModes);
   const [activeCardWidth, setActiveCardWidth] = useState<number | null>(null);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const boardViewportRef = useRef<HTMLElement | null>(null);
   const urlTicketId = searchParams.get("ticketId");
   const normalizedUrlTicketId = urlTicketId?.trim() || null;
   const searchParamsString = searchParams.toString();
-  const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const debouncedSearchQuery = useDebounce(normalizedSearchQuery, 300);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -185,7 +189,9 @@ export function ApplicationsBoard({
     if (
       payload &&
       selectedTicketId &&
-      !optimisticApplications.some((ticket) => ticket.ticketId === selectedTicketId)
+      !optimisticApplications.some(
+        (ticket) => ticket.ticketId === selectedTicketId
+      )
     ) {
       setSelectedTicketId(null);
     }
@@ -230,22 +236,61 @@ export function ApplicationsBoard({
     setPortalRoot(document.body);
   }, []);
 
+  useEffect(() => {
+    if (!debouncedSearchQuery) {
+      return;
+    }
+
+    const firstMatchingStage = APPLICATION_BOARD_STAGE_ORDER.filter(
+      (stage) => !hiddenColumns.includes(stage)
+    ).find((stage) =>
+      optimisticApplications.some(
+        (ticket) =>
+          ticket.currentStage === stage &&
+          doesTicketMatchSearch(ticket, debouncedSearchQuery)
+      )
+    );
+
+    if (!firstMatchingStage || !boardViewportRef.current) {
+      return;
+    }
+
+    const targetColumn = boardViewportRef.current.querySelector<HTMLElement>(
+      `[data-board-stage="${firstMatchingStage}"]`
+    );
+
+    if (!targetColumn) {
+      return;
+    }
+
+    boardViewportRef.current.scrollTo({
+      left: Math.max(targetColumn.offsetLeft - 16, 0),
+      behavior: "smooth",
+    });
+  }, [debouncedSearchQuery, hiddenColumns, optimisticApplications]);
+
   const activeTicket =
     activeTicketId != null
-      ? optimisticApplications.find((ticket) => ticket.ticketId === activeTicketId) ??
-        null
+      ? (optimisticApplications.find(
+          (ticket) => ticket.ticketId === activeTicketId
+        ) ?? null)
       : null;
   const selectedTicket =
     selectedTicketId != null
-      ? optimisticApplications.find(
+      ? (optimisticApplications.find(
           (ticket) => ticket.ticketId === selectedTicketId
-        ) ?? null
+        ) ?? null)
       : null;
   const transitioningTicketSet = new Set(transitioningTicketIds);
-  const visibleColumns = APPLICATION_BOARD_STAGE_ORDER.filter(
+  const enabledColumns = APPLICATION_BOARD_STAGE_ORDER.filter(
     (stage) => !hiddenColumns.includes(stage)
-  );
-  const visibleColumnCount = visibleColumns.length;
+  ).map((stage) => ({
+    stage,
+    tickets: optimisticApplications.filter(
+      (ticket) => ticket.currentStage === stage
+    ),
+  }));
+  const visibleColumnCount = enabledColumns.length;
   const jobSiteOptions = payload?.jobSiteOptions ?? [];
   const normalizedCurrency = payload?.normalizedCurrency ?? "USD";
 
@@ -338,7 +383,9 @@ export function ApplicationsBoard({
       `[data-board-card-id="${String(event.active.id)}"]`
     );
 
-    setActiveCardWidth(activeCardElement?.getBoundingClientRect().width ?? null);
+    setActiveCardWidth(
+      activeCardElement?.getBoundingClientRect().width ?? null
+    );
     setActiveTicketId(String(event.active.id));
   }
 
@@ -415,16 +462,14 @@ export function ApplicationsBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <section className={styles.boardViewport}>
+        <section ref={boardViewportRef} className={styles.boardViewport}>
           <div className={styles.boardColumns}>
-            {visibleColumns.map((stage) => (
+            {enabledColumns.map(({ stage, tickets }) => (
               <BoardColumn
                 key={stage}
                 stage={stage}
-                tickets={optimisticApplications.filter(
-                  (ticket) => ticket.currentStage === stage
-                )}
-                searchQuery={deferredSearchQuery}
+                tickets={tickets}
+                searchQuery={debouncedSearchQuery}
                 sortMode={sortModes[stage]}
                 onOpenTicket={(ticketId) => setSelectedTicketId(ticketId)}
                 transitioningTicketSet={transitioningTicketSet}

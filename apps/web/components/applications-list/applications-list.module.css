@@ -80,10 +80,32 @@
 
 .toolbar {
   display: flex;
-  justify-content: end;
+  justify-content: space-between;
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.searchField {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  flex: 1 1 18rem;
+  min-height: 3rem;
+  min-width: min(24rem, 100%);
+  padding: 0 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+  color: var(--muted);
+}
+
+.searchField input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
 }
 
 .toolbarCopy {
@@ -204,6 +226,11 @@
 
 .table tbody tr:hover {
   background: rgba(var(--accent-rgb), 0.12);
+}
+
+.table tbody .transparentRow {
+  opacity: 0.6;
+  transition: 0.5ms;
 }
 
 .table tbody tr:last-child td {

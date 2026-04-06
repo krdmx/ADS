@@ -29,10 +29,7 @@ export default async function ApplicationsPage() {
 
       <section className={styles.introPanel}>
         <div className={styles.introCopy}>
-          <p className={styles.eyebrow}>Ticket Index</p>
-          <h1 className={styles.title}>
-            Review every workspace from one place.
-          </h1>
+          <h1 className={styles.title}>Your Tickets</h1>
         </div>
       </section>
 

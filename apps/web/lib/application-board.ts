@@ -6,6 +6,8 @@ import {
   type ApplicationBoardTicketResponse,
 } from "@repo/contracts";
 
+import { doesCompanyMatchSearch } from "@/lib/application-search";
+
 export type BoardColumnSortMode = "recent" | "offer_desc" | "offer_asc";
 
 export const APPLICATION_BOARD_STAGE_LABELS: Record<
@@ -216,11 +218,7 @@ export function doesTicketMatchSearch(
   ticket: ApplicationBoardTicketResponse,
   searchQuery: string
 ) {
-  if (!searchQuery) {
-    return true;
-  }
-
-  return ticket.companyName.toLowerCase().includes(searchQuery.toLowerCase());
+  return doesCompanyMatchSearch(ticket, searchQuery);
 }
 
 export function summarizeStageRecord(
